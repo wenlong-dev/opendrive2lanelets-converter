@@ -2,7 +2,7 @@
 class OpenDrive(object):
 
     def __init__(self):
-        self._header = None
+        self._header = Header()
         self._roads = []
         self._controllers = []
         self._junctions = []
@@ -60,3 +60,83 @@ class Header(object):
         self._east = None
         self._west = None
         self._vendor = None
+
+    @property
+    def revMajor(self):
+        return self._revMajor
+
+    @revMajor.setter
+    def revMajor(self, value):
+        self._revMajor = value
+
+    @property
+    def revMinor(self):
+        return self._revMinor
+
+    @revMinor.setter
+    def revMinor(self, value):
+        self._revMinor = value
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
+    def version(self):
+        return self._version
+
+    @version.setter
+    def version(self, value):
+        self._version = value
+
+    @property
+    def date(self):
+        return self._date
+
+    @date.setter
+    def date(self, value):
+        self._date = value
+
+    @property
+    def north(self):
+        return self._north
+
+    @north.setter
+    def north(self, value):
+        self._north = value
+
+    @property
+    def south(self):
+        return self._south
+
+    @south.setter
+    def south(self, value):
+        self._south = value
+
+    @property
+    def east(self):
+        return self._east
+
+    @east.setter
+    def east(self, value):
+        self._east = value
+
+    @property
+    def west(self):
+        return self._west
+
+    @west.setter
+    def west(self, value):
+        self._west = value
+
+    @property
+    def vendor(self):
+        return self._vendor
+
+    @vendor.setter
+    def vendor(self, value):
+        self._vendor = value

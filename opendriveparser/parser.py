@@ -26,6 +26,36 @@ def parse_opendrive(rootNode):
 
     if header is not None:
 
+        if header.get('revMajor') is not None:
+            newOpenDrive.header.revMajor = str(header.get('revMajor'))
+
+        if header.get('revMinor') is not None:
+            newOpenDrive.header.revMinor = str(header.get('revMinor'))
+
+        if header.get('name') is not None:
+            newOpenDrive.header.name = str(header.get('name'))
+
+        if header.get('version') is not None:
+            newOpenDrive.header.version = str(header.get('version'))
+
+        if header.get('date') is not None:
+            newOpenDrive.header.date = str(header.get('date'))
+
+        if header.get('north') is not None:
+            newOpenDrive.header.north = str(header.get('north'))
+
+        if header.get('south') is not None:
+            newOpenDrive.header.south = str(header.get('south'))
+
+        if header.get('east') is not None:
+            newOpenDrive.header.east = str(header.get('east'))
+
+        if header.get('west') is not None:
+            newOpenDrive.header.west = str(header.get('west'))
+
+        if header.get('vendor') is not None:
+            newOpenDrive.header.vendor = str(header.get('vendor'))
+
         # Reference
         if header.find("geoReference") is not None:
             pass
