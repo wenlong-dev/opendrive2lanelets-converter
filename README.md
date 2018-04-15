@@ -11,20 +11,33 @@ This repository provides the code for an OpenDRIVE ([www.opendrive.org](http://w
 
 ## Installation
 
-If needed, the converter can be installed using ```pip```:
+If needed, the converter libraries can be installed using ```pip```:
 
 ```bash
 git clone https://gitlab.lrz.de/koschi/converter.git
 cd converter && pip install .
 ```
 
+## Example Files
+
+Download example files from: http://opendrive.org/download.html
+
 ## Usage
+
+### Using our provided GUI
+
+Additional requirement: PyQt5. Start the GUI with ```python gui.py```
+
+![GUI screenshot](gui_screenshot.png "Screenshot of converter GUI")
+
+### Using the library in your own scripts
 
 ```python
 from lxml import etree
 from opendriveparser import parse_opendrive
 from opendrive2lanelet import Network
 
+# Import, parse and convert OpenDRIVE file
 fh = open("input_opendrive.xodr", 'r')
 openDrive = parse_opendrive(etree.parse(fh).getroot())
 fh.close()
@@ -34,7 +47,8 @@ roadNetwork.loadOpenDrive(openDrive)
 
 scenario = roadNetwork.exportCommonRoadScenario()
 
-# TODO extract common road writer from fvks
-writer = CommonRoadFileWriter(scenario, None)
-writer.write_scenario_to_file("output_commonroad_file.xml")
+# Write CommonRoad scenario to file
+fh = open("output_commonroad_file.xml", "wb")
+fh.write(scenario.export_to_string())
+fh.close()
 ```
