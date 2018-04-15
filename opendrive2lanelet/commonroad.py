@@ -1,5 +1,10 @@
 
+import time
+
 import numpy as np
+
+from lxml import etree
+from lxml.builder import E
 
 class Scenario(object):
 
@@ -19,6 +24,30 @@ class Scenario(object):
             self.lanelet_network.add_lanelet(o)
         else:
             raise ScenarioError
+
+    def export_to_string(self):
+
+        rootElement = E("commonRoad", commonRoadVersion="2017a", date=time.strftime("%d-%b-%Y"), timeStepSize="0.1")
+
+        for lanelet in self.lanelet_network.lanelets:
+
+            # Bounds
+            leftPointsElements = E("leftBound")
+
+            for (x, y) in lanelet.left_vertices:
+                leftPointsElements.append(E("point", E("x", str(x)), E("y", str(y))))
+
+            rightPointsElements = E("rightBound")
+
+            for (x, y) in lanelet.right_vertices:
+                rightPointsElements.append(E("point", E("x", str(x)), E("y", str(y))))
+
+            laneletElement = E("lanelet", leftPointsElements, rightPointsElements)
+            laneletElement.set("id", str(lanelet.lanelet_id))
+
+            rootElement.append(laneletElement)
+
+        return etree.tostring(rootElement, pretty_print=True)
 
 class ScenarioError(Exception):
     """Base class for exceptions in this module."""
