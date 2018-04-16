@@ -1,10 +1,19 @@
 
+import os
 import time
 
 import numpy as np
+from lxml import etree, objectify
 
 from lxml import etree
 from lxml.builder import E
+
+
+
+from pprint import pprint
+
+
+
 
 class Scenario(object):
 
@@ -27,8 +36,9 @@ class Scenario(object):
 
     def export_to_string(self):
 
-        rootElement = E("commonRoad", commonRoadVersion="2017a", date=time.strftime("%d-%b-%Y"), timeStepSize="0.1")
+        rootElement = E("commonRoad", benchmarkID="a", commonRoadVersion="2017a", date=time.strftime("%Y-%m-%d"), timeStepSize="0.1")
 
+        # Road network
         for lanelet in self.lanelet_network.lanelets:
 
             # Bounds
@@ -43,11 +53,80 @@ class Scenario(object):
                 rightPointsElements.append(E("point", E("x", str(x)), E("y", str(y))))
 
             laneletElement = E("lanelet", leftPointsElements, rightPointsElements)
-            laneletElement.set("id", str(lanelet.lanelet_id))
+            laneletElement.set("id", str(int(lanelet.lanelet_id)))
 
             rootElement.append(laneletElement)
 
+        # Dummy planning problem
+        planningProblem = E("planningProblem", id=str(0))
+
+        initialState = E("initialState")
+        initialState.append(E('position', E('point', E('x', str(0.0)), E('y', str(0.0)))))
+        initialState.append(E('velocity', E('exact', str(0.0))))
+        initialState.append(E('orientation', E('exact', str(0.0))))
+        initialState.append(E('yawRate', E('exact', str(0.0))))
+        initialState.append(E('slipAngle', E('exact', str(0.0))))
+        initialState.append(E('time', E('exact', str(0.0))))
+
+        planningProblem.append(initialState)
+
+        goalRegion = E("goalRegion")
+
+        goalState = E("state")
+        goalState.append(E('position', E('point', E('x', str(0.0)), E('y', str(0.0)))))
+        goalState.append(E('orientation', E('exact', str(0.0))))
+        goalState.append(E('time', E('exact', str(0.0))))
+        goalState.append(E('velocity', E('exact', str(0.0))))
+        goalState.append(E('acceleration', E('exact', str(0.0))))
+
+        goalRegion.append(goalState)
+
+        planningProblem.append(goalRegion)
+
+        rootElement.append(planningProblem)
+
         return etree.tostring(rootElement, pretty_print=True)
+
+    @staticmethod
+    def read_from_string(input_string, dt=0.1):
+
+        # Parse XML using CommonRoad schema
+        schema = etree.XMLSchema(file=open(os.path.dirname(os.path.abspath(__file__)) + "/XML_commonRoad_XSD.xsd", "rb"))
+        parser = objectify.makeparser(schema=schema)
+
+        root = objectify.fromstring(input_string, parser=parser)
+
+        # Create scenario
+        scenario = Scenario(
+            dt=dt,
+            benchmark_id=root.attrib['benchmarkID']
+        )
+
+        for lanelet in root.getchildren():
+            if lanelet.tag != 'lanelet':
+                print('found tag {}'.format(lanelet.tag))
+                continue
+
+            left_vertices = []
+            right_vertices = []
+
+            for pt in lanelet.leftBound.getchildren():
+                left_vertices.append(np.array([float(pt.x), float(pt.y)]))
+
+            for pt in lanelet.rightBound.getchildren():
+                right_vertices.append(np.array([float(pt.x), float(pt.y)]))
+
+            center_vertices = [(l + r) / 2 for (l, r) in zip(left_vertices, right_vertices)]
+
+            scenario.lanelet_network.add_lanelet(Lanelet(
+                left_vertices=np.array([np.array([x, y]) for x, y in left_vertices]),
+                center_vertices=np.array([np.array([x, y]) for x, y in center_vertices]),
+                right_vertices=np.array([np.array([x, y]) for x, y in right_vertices]),
+                lanelet_id=lanelet.attrib['id']
+            ))
+
+        return scenario
+
 
 class ScenarioError(Exception):
     """Base class for exceptions in this module."""

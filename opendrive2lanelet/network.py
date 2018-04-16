@@ -1,11 +1,13 @@
 
 import copy
 
+import numpy as np
+
 from opendriveparser.elements.openDrive import OpenDrive
 
 from opendrive2lanelet.plane_elements.plane import PLane
 from opendrive2lanelet.plane_elements.border import Border
-from opendrive2lanelet.utils import encode_road_section_lane_width_id, allCloseToZero
+from opendrive2lanelet.utils import encode_road_section_lane_width_id, decode_road_section_lane_width_id, allCloseToZero
 
 from opendrive2lanelet.commonroad import LaneletNetwork, Scenario
 
@@ -47,21 +49,61 @@ class Network(object):
         self._planes.append(pLane)
 
     def exportLaneletNetwork(self, filterTypes=None):
-        """ Export lanelet as fvks lanelet network """
+        """ Export lanelet as lanelet network """
 
-        laneletNetwork = LaneletNetwork()
-
-        added_ids = []
+        # Group all width in the same lane
+        laneletGroups = {}
 
         for pLane in self._planes:
+            roadId, sectionId, laneId, _ = decode_road_section_lane_width_id(pLane.id)
+            groupId = ".".join([str(roadId), str(sectionId), str(laneId)])
+
             if filterTypes is not None and pLane.type not in filterTypes:
                 continue
 
-            if pLane.id in added_ids:
-                continue
+            if groupId not in laneletGroups:
+                laneletGroups[groupId] = []
 
-            laneletNetwork.add_lanelet(pLane.converToLanelet())
-            added_ids.append(pLane.id)
+            laneletGroups[groupId].append(pLane)
+
+        # Convert groups to lanelets
+        laneletNetwork = LaneletNetwork()
+
+        for groupId, pLanes in laneletGroups.items():
+
+            pLanes.sort(key=lambda x: decode_road_section_lane_width_id(pLane.id)[3], reverse=False)
+
+            prevLanelet = None
+
+            for pLane in pLanes:
+                lanelet = pLane.converToLanelet()
+
+                if prevLanelet is None:
+                    prevLanelet = lanelet
+                    prevLanelet.lanelet_id = groupId
+                    continue
+
+                prevLanelet.left_vertices = np.vstack((prevLanelet.left_vertices, lanelet.left_vertices[1:]))
+                prevLanelet.center_vertices = np.vstack((prevLanelet.center_vertices, lanelet.center_vertices[1:]))
+                prevLanelet.right_vertices = np.vstack((prevLanelet.right_vertices, lanelet.right_vertices[1:]))
+
+            laneletNetwork.add_lanelet(prevLanelet)
+
+        # Assign an integer id to each lanelet
+        id_assign = {}
+        lanelet_id = 100
+
+        for lanelet in laneletNetwork.lanelets:
+
+            if lanelet.lanelet_id in id_assign:
+                new_lanelet_id = id_assign[lanelet.lanelet_id]
+            else:
+                new_lanelet_id = lanelet_id
+                id_assign[lanelet.lanelet_id] = new_lanelet_id
+
+                lanelet_id += 1
+
+            lanelet.lanelet_id = new_lanelet_id
 
         return laneletNetwork
 
