@@ -55,6 +55,12 @@ class Scenario(object):
             laneletElement = E("lanelet", leftPointsElements, rightPointsElements)
             laneletElement.set("id", str(int(lanelet.lanelet_id)))
 
+            for predecessor in lanelet.predecessor:
+                laneletElement.append(E("predecessor", ref=str(predecessor)))
+
+            for successor in lanelet.successor:
+                laneletElement.append(E("successor", ref=str(successor)))
+
             rootElement.append(laneletElement)
 
         # Dummy planning problem
@@ -102,10 +108,7 @@ class Scenario(object):
             benchmark_id=root.attrib['benchmarkID']
         )
 
-        for lanelet in root.getchildren():
-            if lanelet.tag != 'lanelet':
-                print('found tag {}'.format(lanelet.tag))
-                continue
+        for lanelet in root.iterchildren('lanelet'):
 
             left_vertices = []
             right_vertices = []
@@ -122,7 +125,9 @@ class Scenario(object):
                 left_vertices=np.array([np.array([x, y]) for x, y in left_vertices]),
                 center_vertices=np.array([np.array([x, y]) for x, y in center_vertices]),
                 right_vertices=np.array([np.array([x, y]) for x, y in right_vertices]),
-                lanelet_id=lanelet.attrib['id']
+                lanelet_id=int(lanelet.attrib['id']),
+                predecessor=[int(el.attrib['ref']) for el in lanelet.iterchildren(tag='predecessor')],
+                successor=[int(el.attrib['ref']) for el in lanelet.iterchildren(tag='successor')]
             ))
 
         return scenario
@@ -190,6 +195,7 @@ class Lanelet(object):
                                  np.linalg.norm(self.center_vertices[i] -
                                                 self.center_vertices[i-1]))
         self.distance = np.array(self.distance)
+        self.description = ""
 
     def concatenate(self, lanelet):
         float_tolerance = 1e-6

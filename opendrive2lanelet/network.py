@@ -9,7 +9,7 @@ from opendrive2lanelet.plane_elements.plane import PLane
 from opendrive2lanelet.plane_elements.border import Border
 from opendrive2lanelet.utils import encode_road_section_lane_width_id, decode_road_section_lane_width_id, allCloseToZero
 
-from opendrive2lanelet.commonroad import LaneletNetwork, Scenario
+from opendrive2lanelet.commonroad import LaneletNetwork, Scenario, ScenarioError
 
 
 class Network(object):
@@ -17,6 +17,7 @@ class Network(object):
 
     def __init__(self):
         self._planes = []
+        self._linkIndex = None
 
     def loadOpenDrive(self, openDrive):
         """ Load all elements of an OpenDRIVE network to a parametric lane representation """
@@ -24,7 +25,7 @@ class Network(object):
         if not isinstance(openDrive, OpenDrive):
             raise TypeError()
 
-        linkIndex = self.createLinkIndex(openDrive)
+        self._linkIndex = self.createLinkIndex(openDrive)
 
         # Convert all parts of a road to parametric lanes (planes)
         for road in openDrive.roads:
@@ -35,10 +36,10 @@ class Network(object):
             # A lane section is the smallest part that can be converted at once
             for laneSection in road.lanes.laneSections:
 
-                pLanes = self.laneSectionToPLanes(laneSection, referenceBorder, road.id, linkIndex)
+                pLanes = self.laneSectionToPLanes(laneSection, referenceBorder, road.id, self._linkIndex)
 
                 # Now adjust the pLanes at the merging and split points
-                self.handleMergingLanes(pLanes, linkIndex)
+                #self.handleMergingLanes(pLanes, self.linkIndex)
 
                 # The road id is used to create a traceable id value to each plane
                 self._planes.extend(pLanes)
@@ -69,45 +70,60 @@ class Network(object):
         # Convert groups to lanelets
         laneletNetwork = LaneletNetwork()
 
-        for groupId, pLanes in laneletGroups.items():
+        # for groupId, pLanes in laneletGroups.items():
 
-            pLanes.sort(key=lambda x: decode_road_section_lane_width_id(pLane.id)[3], reverse=False)
+        #     pLanes.sort(key=lambda x: decode_road_section_lane_width_id(pLane.id)[3], reverse=False)
 
-            prevLanelet = None
+        #     prevLanelet = None
 
-            for pLane in pLanes:
-                lanelet = pLane.converToLanelet()
+        #     for pLane in pLanes:
+        #         lanelet = pLane.converToLanelet()
 
-                if prevLanelet is None:
-                    prevLanelet = lanelet
-                    prevLanelet.lanelet_id = groupId
-                    continue
+        #         if prevLanelet is None:
+        #             prevLanelet = lanelet
+        #             prevLanelet.lanelet_id = groupId
+        #             continue
 
-                prevLanelet.left_vertices = np.vstack((prevLanelet.left_vertices, lanelet.left_vertices[1:]))
-                prevLanelet.center_vertices = np.vstack((prevLanelet.center_vertices, lanelet.center_vertices[1:]))
-                prevLanelet.right_vertices = np.vstack((prevLanelet.right_vertices, lanelet.right_vertices[1:]))
+        #         prevLanelet.left_vertices = np.vstack((prevLanelet.left_vertices, lanelet.left_vertices[1:]))
+        #         prevLanelet.center_vertices = np.vstack((prevLanelet.center_vertices, lanelet.center_vertices[1:]))
+        #         prevLanelet.right_vertices = np.vstack((prevLanelet.right_vertices, lanelet.right_vertices[1:]))
 
-            laneletNetwork.add_lanelet(prevLanelet)
+        #     laneletNetwork.add_lanelet(prevLanelet)
+
+        for pLane in self._planes:
+            if filterTypes is not None and pLane.type not in filterTypes:
+                continue
+
+            lanelet = pLane.converToLanelet()
+
+            lanelet.predecessor = self._linkIndex.getPredecessors(pLane.id)
+            lanelet.successor = self._linkIndex.getSuccessors(pLane.id)
+
+            laneletNetwork.add_lanelet(lanelet)
 
         # Assign an integer id to each lanelet
-        id_assign = {}
-        lanelet_id = 100
+        def convert_to_new_id(old_lanelet_id):
+            if old_lanelet_id in convert_to_new_id.id_assign:
+                new_lanelet_id = convert_to_new_id.id_assign[old_lanelet_id]
+            else:
+                new_lanelet_id = convert_to_new_id.lanelet_id
+                convert_to_new_id.id_assign[old_lanelet_id] = new_lanelet_id
+
+            convert_to_new_id.lanelet_id += 1
+            return new_lanelet_id
+
+        convert_to_new_id.id_assign = {}
+        convert_to_new_id.lanelet_id = 100
 
         for lanelet in laneletNetwork.lanelets:
-
-            if lanelet.lanelet_id in id_assign:
-                new_lanelet_id = id_assign[lanelet.lanelet_id]
-            else:
-                new_lanelet_id = lanelet_id
-                id_assign[lanelet.lanelet_id] = new_lanelet_id
-
-                lanelet_id += 1
-
-            lanelet.lanelet_id = new_lanelet_id
+            lanelet.description = lanelet.lanelet_id
+            lanelet.lanelet_id = convert_to_new_id(lanelet.lanelet_id)
+            lanelet.predecessor = [convert_to_new_id(x) for x in lanelet.predecessor]
+            lanelet.successor = [convert_to_new_id(x) for x in lanelet.successor]
 
         return laneletNetwork
 
-    def exportCommonRoadScenario(self, dt=0.5, benchmark_id=None, filterTypes=['driving', 'sidewalk']):
+    def exportCommonRoadScenario(self, dt=0.1, benchmark_id=None, filterTypes=None):
         """ Export a full CommonRoad scenario """
 
         scenario = Scenario(
@@ -116,7 +132,7 @@ class Network(object):
         )
 
         scenario.add_objects(self.exportLaneletNetwork(
-            filterTypes=filterTypes
+            filterTypes=filterTypes if isinstance(filterTypes, list) else ['driving']
         ))
 
         return scenario
@@ -185,7 +201,6 @@ class Network(object):
 
                 for width in lane.widths:
                     newPLaneBorder.coeffsOffsets.append(width.sOffset)
-
                     newPLaneBorder.coeffs.append([x * coeffsFactor for x in width.coeffs])
 
                 laneBorders.append(newPLaneBorder)
@@ -224,28 +239,26 @@ class Network(object):
 
         linkIndex = LinkIndex()
 
-        # 1. Convert junction definitions
         for junction in openDrive.junctions:
-
             for connection in junction.connections:
 
+                # Predecessor
+                predecessorRoad = openDrive.getRoad(connection.incomingRoad)
+
+                if predecessorRoad is None:
+                    continue
+
+                predecessorLaneSection = predecessorRoad.lanes.getLaneSection(predecessorRoad.lanes.getLastLaneSectionIdx())
+
+                # Successor
+                successorRoad = openDrive.getRoad(connection.connectingRoad)
+
+                if successorRoad is None:
+                    continue
+
+                successorLaneSection = successorRoad.lanes.getLaneSection(successorRoad.lanes.getLastLaneSectionIdx() if connection.contactPoint == "end" else 0)
+
                 for laneLink in connection.laneLinks:
-
-                    # Predecessor
-                    predecessorRoad = openDrive.getRoad(connection.incomingRoad)
-
-                    if predecessorRoad is None:
-                        continue
-
-                    # Check if predecessor road has junction as predecessor or successor
-                    if predecessorRoad.link.predecessor is not None and \
-                        predecessorRoad.link.predecessor.elementType == "junction" and \
-                        predecessorRoad.link.predecessor.elementId == junction.id:
-
-                        predecessorLaneSection = predecessorRoad.lanes.getLaneSection(0)
-
-                    else:
-                        predecessorLaneSection = predecessorRoad.lanes.getLaneSection(predecessorRoad.lanes.getLastLaneSectionIdx())
 
                     predecessorLane = predecessorLaneSection.getLane(laneLink.fromId)
                     predecessorWidth = predecessorLane.getWidth(predecessorLane.getLastLaneWidthIdx())
@@ -257,13 +270,6 @@ class Network(object):
                         predecessorWidth.idx
                     )
 
-                    # Successor
-                    successorRoad = openDrive.getRoad(connection.connectingRoad)
-
-                    if successorRoad is None:
-                        continue
-
-                    successorLaneSection = successorRoad.lanes.getLaneSection(successorRoad.lanes.getLastLaneSectionIdx() if connection.contactPoint == "end" else 0)
                     successorLane = successorLaneSection.getLane(laneLink.toId)
                     successorWidth = successorLane.getWidth(successorLane.getLastLaneWidthIdx() if connection.contactPoint == "end" else 0)
 
@@ -278,16 +284,10 @@ class Network(object):
 
         # 2. Get links from the roads
         for road in openDrive.roads:
-
             for laneSection in road.lanes.laneSections:
-
                 for lane in laneSection.allLanes:
-
                     for width in lane.widths:
-
                         pLaneId = encode_road_section_lane_width_id(road.id, laneSection.idx, lane.id, width.idx)
-
-                        # TODO HANDLE predecessors of first width and laneSection
 
                         # Not the last width entry? > Next width entry in same lane section
                         if width.idx < lane.getLastLaneWidthIdx():
@@ -302,7 +302,7 @@ class Network(object):
 
                             # If lane does not provide link, we do not have enough information, skip
                             if lane.link.successorId is None:
-                                #print(str(pLaneId) + " skipped")
+                                print(str(pLaneId) + " skipped because lane does not provide link information")
                                 continue
 
                             successor = encode_road_section_lane_width_id(road.id, laneSection.idx + 1, lane.link.successorId, 0)
@@ -311,11 +311,12 @@ class Network(object):
                             continue
 
                         # Connecting to another road
-                        if road.link.successor is not None:
+                        if road.link.successor is not None and road.link.successor.elementType == "road":
 
-                            if road.link.successor.elementType == "road":
+                            successorRoad = openDrive.getRoad(road.link.successor.elementId)
 
-                                successorRoad = openDrive.getRoad(road.link.successor.elementId)
+                            if successorRoad:
+
                                 successorLaneSection = successorRoad.lanes.getLaneSection(successorRoad.lanes.getLastLaneSectionIdx() if road.link.successor.contactPoint == "end" else 0)
 
                                 # If lane does not provide link, we do not have enough information, skip
@@ -342,6 +343,9 @@ class Network(object):
                             if road.link.predecessor.elementType == "road":
 
                                 predecessorRoad = openDrive.getRoad(road.link.predecessor.elementId)
+                                if predecessorRoad is None:
+                                    continue
+
                                 predecessorLaneSection = predecessorRoad.lanes.getLaneSection(predecessorRoad.lanes.getLastLaneSectionIdx() if road.link.predecessor.contactPoint == "end" else 0)
 
                                 # If lane does not provide link, we do not have enough information, skip
@@ -483,12 +487,12 @@ class LinkIndex(object):
     def __init__(self):
         self._successors = {}
 
-    def addLink(self, predecessor, successor):
-        if predecessor not in self._successors:
-            self._successors[predecessor] = []
+    def addLink(self, pLaneId, successor):
+        if pLaneId not in self._successors:
+            self._successors[pLaneId] = []
 
-        if successor not in self._successors[predecessor]:
-            self._successors[predecessor].append(successor)
+        if successor not in self._successors[pLaneId]:
+            self._successors[pLaneId].append(successor)
 
     def remove(self, pLaneId):
         # Delete key
@@ -505,6 +509,20 @@ class LinkIndex(object):
             return []
 
         return self._successors[pLaneId]
+
+    def getPredecessors(self, pLaneId):
+        predecessors = []
+
+        for successorsPLaneId, successors in self._successors.items():
+            if pLaneId not in successors:
+                continue
+
+            if successorsPLaneId in predecessors:
+                continue
+
+            predecessors.append(successorsPLaneId)
+
+        return predecessors
 
     def __str__(self):
         retstr = "Link Index:\n"

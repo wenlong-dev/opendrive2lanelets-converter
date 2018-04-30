@@ -17,7 +17,3 @@ def allCloseToZero(a):
 
     import numpy
     return numpy.allclose(a, numpy.zeros(numpy.shape(a)))
-
-def getLanePredecessor(opendriveLane):
-    """ Takes OpenDRIVE lane and determines if it has a defined predecessor """
-    pass
