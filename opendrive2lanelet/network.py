@@ -38,9 +38,6 @@ class Network(object):
 
                 pLanes = Network.laneSectionToPLanes(laneSection, referenceBorder)
 
-                # Now adjust the pLanes at the merging and split points
-                self.handleMergingLanes(pLanes, self._linkIndex)
-
                 self._planes.extend(pLanes)
 
     def addPLane(self, pLane):
@@ -212,117 +209,6 @@ class Network(object):
                 prevInnerNeighbours = innerNeighbours
 
         return newPLanes
-
-    @staticmethod
-    def handleMergingLanes(pLanes, linkIndex):
-
-        # def purgeNullPLanes(pLanes, linkIndex):
-        #     """ Delete all zero wide lanes """
-
-        #     for pLane in pLanes:
-        #         if pLane.isNotExistent:
-        #             # Delete from link index
-        #             linkIndex.remove(pLane.id)
-
-        #             # Delete from neighbours
-        #             # TODO!!!
-
-        #             # And delete from list itself
-        #             pLanes.remove(pLane)
-
-        def isMergingIntoInnerPLane(pLane, linkIndex):
-            if len(linkIndex.getSuccessors(pLane.id)) == 0 and pLane.innerNeighbours and pLane.innerNeighbours[0].type == pLane.type:
-                return True
-            return False
-
-        def isMergingIntoOuterPLane(pLane, linkIndex):
-            if len(linkIndex.getSuccessors(pLane.id)) == 0 and pLane.outerNeighbours and pLane.outerNeighbours[0].type == pLane.type:
-                return True
-            return False
-
-        def makeOuterNeighbourConnections(pLanes):
-            for pLane in pLanes:
-                # No neighbours
-                if pLane.innerNeighbours is None:
-                    continue
-
-                for neighbouringPLane in pLane.innerNeighbours:
-                    # Do not add twice
-                    if pLane in neighbouringPLane.outerNeighbours:
-                        continue
-                    neighbouringPLane.outerNeighbours.append(pLane)
-
-        # Delete all pLanes with width = 0
-        #purgeNullPLanes(pLanes, linkIndex)
-        makeOuterNeighbourConnections(pLanes)
-
-        mergingPLanes = []
-
-        for pLane in pLanes:
-            pass
-
-            if isMergingIntoInnerPLane(pLane, linkIndex):
-                sPos = pLane.innerBorder.refOffset + pLane.length
-
-                # Lane can have more than one neighbour, find right one
-                for neighbour in pLane.innerNeighbours:
-
-                    # End of lane is actually in the neighbours domain
-                    if neighbour.outerBorderOffset + neighbour.outerBorder.refOffset <= sPos <= neighbour.outerBorderOffset + neighbour.outerBorder.refOffset + neighbour.length:
-
-                        newMergingLane = copy.copy(pLane)
-
-                        # End width
-                        width = neighbour.calcWidth(sPos)
-
-                        # Define new outer border based on previous one
-                        newMergingLaneBorder = Border()
-                        newMergingLaneBorder.reference = newMergingLane.outerBorder
-
-                        # TODO make function that transitions from the first width to the next one
-                        newMergingLaneBorder.coeffsOffsets.append(0)
-                        newMergingLaneBorder.coeffs.append([width])
-
-                        newMergingLane.innerBorder = newMergingLaneBorder
-                        newMergingLane.innerBorderOffset = newMergingLane.outerBorderOffset
-
-                        mergingPLanes.append(newMergingLane)
-
-                        break
-
-            if isMergingIntoOuterPLane(pLane, linkIndex):
-                sPos = pLane.outerBorder.refOffset + pLane.length
-
-                # Find corresponding neighbour for position
-                for neighbour in pLane.outerNeighbours:
-
-                    if neighbour.innerBorderOffset + neighbour.innerBorder.refOffset <= sPos <= neighbour.innerBorderOffset + neighbour.innerBorder.refOffset + neighbour.length:
-
-                        newMergingLane = copy.copy(pLane)
-
-                        width = neighbour.calcWidth(sPos)
-
-                        # Define new outer border based on previous one
-                        newMergingLaneBorder = Border()
-                        newMergingLaneBorder.reference = newMergingLane.innerBorder
-
-                        newMergingLaneBorder.coeffsOffsets.append(0)
-                        newMergingLaneBorder.coeffs.append([width])
-
-                        newMergingLane.outerBorder = newMergingLaneBorder
-                        newMergingLane.outerBorderOffset = newMergingLane.innerBorderOffset
-
-                        mergingPLanes.append(newMergingLane)
-
-                        break
-
-        # Remove the pLanes that get merged
-        for mergingPLane in mergingPLanes:
-            for pLane in pLanes:
-                if pLane.id == mergingPLane.id:
-                    pLanes.remove(pLane)
-
-        pLanes.extend(mergingPLanes)
 
 
     @staticmethod
