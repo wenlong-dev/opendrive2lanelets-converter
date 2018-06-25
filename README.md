@@ -53,7 +53,7 @@ fh.close()
 ```
 
 
-### Known Problems
+## Known Problems
 
 - When trying to use the gui.py under Wayland, the following error occurs:
   ```
@@ -63,7 +63,7 @@ fh.close()
   ```
   Set the platform to *xcb* using this command: ```export QT_QPA_PLATFORM="xcb"```
 
-### ToDo
+## ToDo
 
 - CommonRoad does not support lane types right now. When this is implemented, the OpenDRIVE types have to be mapped onto the CommonRoad ones and added to the lanelet output.
 
@@ -72,3 +72,13 @@ fh.close()
 - Lane merges may cause problems with predecessor or successor definition.
 
 - Unit-Tests
+
+## License (MIT)
+
+Copyright (c) 2018 Stefan Urban
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
