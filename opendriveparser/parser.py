@@ -286,7 +286,7 @@ def parse_opendrive(rootNode):
         # Lane sections
         for laneSectionIdx, laneSection in enumerate(road.find("lanes").findall("laneSection")):
 
-            newLaneSection = RoadLanesSection()
+            newLaneSection = RoadLanesSection(road=newRoad)
 
             # Manually enumerate lane sections for referencing purposes
             newLaneSection.idx = laneSectionIdx

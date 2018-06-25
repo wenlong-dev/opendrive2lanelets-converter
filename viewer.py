@@ -23,42 +23,10 @@ from PyQt5.QtWidgets import QSizePolicy, QHBoxLayout, QVBoxLayout, QTableWidgetI
 from opendrive2lanelet.commonroad import Lanelet, LaneletNetwork, Scenario, ScenarioError
 
 
-# def drawLanelet(ax, lanelet, color="blue"):
-
-#     # Convert bounds to vertices array
-#     vertices = []
-
-#     for x, y in lanelet.left_vertices + lanelet.right_vertices[::-1]:
-#         vertices.append([x, y])
-
-#     # Draw points
-#     drawPolygon(vertices, ax, color)
-
-# def drawPolygon(vertices, ax, color="green"):
-#     from matplotlib.path import Path
-#     import matplotlib.patches as patches
-
-#     verts = []
-#     codes = [Path.MOVETO]
-
-#     for p in vertices:
-#         verts.append(p)
-#         codes.append(Path.LINETO)
-#     del codes[-1]
-
-#     codes.append(Path.CLOSEPOLY)
-#     verts.append((0, 0))
-
-#     path = Path(verts, codes)
-#     patch = patches.PathPatch(path, facecolor="red", edgecolor="black", alpha=0.5)
-
-#     ax.add_patch(patch)
-#     ax.autoscale_view()
-
 class Canvas(FigureCanvas):
     """Ultimately, this is a QWidget """
 
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=5, height=5, dpi=100):
 
         self.ax = None
 
@@ -73,8 +41,9 @@ class Canvas(FigureCanvas):
     def clear_axes(self):
         if self.ax is not None:
             self.ax.clear()
+        else:
 
-        self.ax = self.fig.add_subplot(111)
+            self.ax = self.fig.add_subplot(111)
         self.ax.set_aspect('equal', 'datalim')
         self.ax.set_axis_off()
 
@@ -185,8 +154,6 @@ class MainWindow(QWidget):
 
         selectedLanelets = self.laneletsList.selectedItems()
 
-        print(selectedLanelets)
-
         if not selectedLanelets:
             self.selected_lanelet_id = None
             return
@@ -262,11 +229,14 @@ class MainWindow(QWidget):
             codes[-1] = Path.CLOSEPOLY
 
             path = Path(verts, codes)
-            ax.add_patch(PathPatch(path, facecolor=color, edgecolor="black", lw=0.5, alpha=alpha, zorder=zorder, label=label))
+
+            ax.add_patch(PathPatch(path, facecolor=color, edgecolor="black", lw=0.0, alpha=alpha, zorder=zorder, label=label))
+
+            ax.plot([x for x, y in lanelet.left_vertices], [y for x, y in lanelet.left_vertices], color="black", lw=0.1)
+            ax.plot([x for x, y in lanelet.right_vertices], [y for x, y in lanelet.right_vertices], color="black", lw=0.1)
 
         handles, labels = self.dynamic.get_axes().get_legend_handles_labels()
         self.dynamic.get_axes().legend(handles, labels)
-
 
         self.dynamic.get_axes().set_xlim([xlim1, xlim2])
         self.dynamic.get_axes().set_ylim([ylim1, ylim2])
@@ -282,9 +252,8 @@ class MainWindow(QWidget):
             self.laneletsList.setItem(idx - 1, 1, QTableWidgetItem("{}".format(lanelet.description)))
 
     def testCmd(self):
-        print("test123")
-        self.dynamic.get_axes().lines.pop(0)
-        self.dynamic.update_plot()
+        self.dynamic.fig.savefig("foo.pdf", bbox_inches='tight')
+
 
 
 if __name__ == '__main__':

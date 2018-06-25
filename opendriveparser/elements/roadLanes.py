@@ -88,13 +88,15 @@ class LaneOffset(object):
 
 class LaneSection(object):
 
-    def __init__(self):
+    def __init__(self, road=None):
         self._idx = None
         self._sPos = None
         self._singleSide = None
         self._leftLanes = LeftLanes()
         self._centerLanes = CenterLanes()
         self._rightLanes = RightLanes()
+
+        self._parentRoad = road
 
     @property
     def idx(self):
@@ -156,6 +158,10 @@ class LaneSection(object):
                 return lane
 
         return None
+
+    @property
+    def parentRoad(self):
+        return self._parentRoad
 
 
 class LeftLanes(object):

@@ -16,13 +16,17 @@ from viewer import MainWindow as ViewerWidget
 
 class MainWindow(QWidget):
 
-    def __init__(self):
+    def __init__(self, argv):
         super().__init__()
 
         self.loadedRoadNetwork = None
 
         self._initUserInterface()
         self.show()
+
+        if len(argv) >= 2:
+            self.loadOpenDriveFile(argv[1])
+            self.viewLaneletNetwork()
 
     def _initUserInterface(self):
 
@@ -34,7 +38,7 @@ class MainWindow(QWidget):
         self.loadButton.setToolTip('Load a OpenDRIVE scenario within a *.xodr file')
         self.loadButton.move(10, 10)
         self.loadButton.resize(130, 35)
-        self.loadButton.clicked.connect(self.openOpenDriveFile)
+        self.loadButton.clicked.connect(self.openOpenDriveFileDialog)
 
         self.inputOpenDriveFile = QLineEdit(self)
         self.inputOpenDriveFile.move(150, 10)
@@ -63,7 +67,7 @@ class MainWindow(QWidget):
         self.exportCommonRoadButton.setDisabled(True)
         self.viewOutputButton.setDisabled(True)
 
-    def openOpenDriveFile(self):
+    def openOpenDriveFileDialog(self):
         self.resetOutputElements()
 
         path, _ = QFileDialog.getOpenFileName(
@@ -76,6 +80,10 @@ class MainWindow(QWidget):
 
         if not path:
             return
+
+        self.loadOpenDriveFile(path)
+
+    def loadOpenDriveFile(self, path):
 
         filename = os.path.basename(path)
         self.inputOpenDriveFile.setText(filename)
@@ -149,7 +157,7 @@ class MainWindow(QWidget):
         viewer.viewer.openScenario(self.loadedRoadNetwork.exportCommonRoadScenario())
         viewer.show()
 
-    # def viewLaneletNetwork2(self):
+    # def viewLaneletNetwork(self):
     #     import matplotlib.pyplot as plt
     #     from fvks.visualization.draw_dispatch import draw_object
     #     from fvks.scenario.lanelet import Lanelet as FvksLanelet
@@ -194,5 +202,5 @@ if __name__ == '__main__':
 
     # Startup application
     app = QApplication(sys.argv)
-    ex = MainWindow()
+    ex = MainWindow(sys.argv)
     sys.exit(app.exec_())

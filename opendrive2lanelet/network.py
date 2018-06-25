@@ -36,12 +36,11 @@ class Network(object):
             # A lane section is the smallest part that can be converted at once
             for laneSection in road.lanes.laneSections:
 
-                pLanes = self.laneSectionToPLanes(laneSection, referenceBorder, road.id, self._linkIndex)
+                pLanes = Network.laneSectionToPLanes(laneSection, referenceBorder)
 
                 # Now adjust the pLanes at the merging and split points
-                #self.handleMergingLanes(pLanes, self.linkIndex)
+                self.handleMergingLanes(pLanes, self._linkIndex)
 
-                # The road id is used to create a traceable id value to each plane
                 self._planes.extend(pLanes)
 
     def addPLane(self, pLane):
@@ -69,26 +68,6 @@ class Network(object):
 
         # Convert groups to lanelets
         laneletNetwork = LaneletNetwork()
-
-        # for groupId, pLanes in laneletGroups.items():
-
-        #     pLanes.sort(key=lambda x: decode_road_section_lane_width_id(pLane.id)[3], reverse=False)
-
-        #     prevLanelet = None
-
-        #     for pLane in pLanes:
-        #         lanelet = pLane.converToLanelet()
-
-        #         if prevLanelet is None:
-        #             prevLanelet = lanelet
-        #             prevLanelet.lanelet_id = groupId
-        #             continue
-
-        #         prevLanelet.left_vertices = np.vstack((prevLanelet.left_vertices, lanelet.left_vertices[1:]))
-        #         prevLanelet.center_vertices = np.vstack((prevLanelet.center_vertices, lanelet.center_vertices[1:]))
-        #         prevLanelet.right_vertices = np.vstack((prevLanelet.right_vertices, lanelet.right_vertices[1:]))
-
-        #     laneletNetwork.add_lanelet(prevLanelet)
 
         for pLane in self._planes:
             if filterTypes is not None and pLane.type not in filterTypes:
@@ -118,6 +97,7 @@ class Network(object):
         for lanelet in laneletNetwork.lanelets:
             lanelet.description = lanelet.lanelet_id
             lanelet.lanelet_id = convert_to_new_id(lanelet.lanelet_id)
+
             lanelet.predecessor = [convert_to_new_id(x) for x in lanelet.predecessor]
             lanelet.successor = [convert_to_new_id(x) for x in lanelet.successor]
 
@@ -132,7 +112,7 @@ class Network(object):
         )
 
         scenario.add_objects(self.exportLaneletNetwork(
-            filterTypes=filterTypes if isinstance(filterTypes, list) else ['driving']
+            filterTypes=filterTypes if isinstance(filterTypes, list) else ['driving', 'onRamp', 'offRamp', 'exit', 'entry']
         ))
 
         return scenario
@@ -162,7 +142,7 @@ class Network(object):
         return firstLaneBorder
 
     @staticmethod
-    def laneSectionToPLanes(laneSection, referenceBorder, roadId, linkIndex):
+    def laneSectionToPLanes(laneSection, referenceBorder):
         """ Convert a whole lane section into a list of planes """
 
         newPLanes = []
@@ -209,7 +189,7 @@ class Network(object):
                 for width in lane.widths:
 
                     newPLane = PLane(
-                        id=encode_road_section_lane_width_id(roadId, laneSection.idx, lane.id, width.idx),
+                        id=encode_road_section_lane_width_id(laneSection.parentRoad.id, laneSection.idx, lane.id, width.idx),
                         type=lane.type
                     )
 
@@ -234,156 +214,21 @@ class Network(object):
         return newPLanes
 
     @staticmethod
-    def createLinkIndex(openDrive):
-        """ Step through all junctions and each single lane to build up a index """
-
-        linkIndex = LinkIndex()
-
-        for junction in openDrive.junctions:
-            for connection in junction.connections:
-
-                # Predecessor
-                predecessorRoad = openDrive.getRoad(connection.incomingRoad)
-
-                if predecessorRoad is None:
-                    continue
-
-                predecessorLaneSection = predecessorRoad.lanes.getLaneSection(predecessorRoad.lanes.getLastLaneSectionIdx())
-
-                # Successor
-                successorRoad = openDrive.getRoad(connection.connectingRoad)
-
-                if successorRoad is None:
-                    continue
-
-                successorLaneSection = successorRoad.lanes.getLaneSection(successorRoad.lanes.getLastLaneSectionIdx() if connection.contactPoint == "end" else 0)
-
-                for laneLink in connection.laneLinks:
-
-                    predecessorLane = predecessorLaneSection.getLane(laneLink.fromId)
-                    predecessorWidth = predecessorLane.getWidth(predecessorLane.getLastLaneWidthIdx())
-
-                    predecessor = encode_road_section_lane_width_id(
-                        predecessorRoad.id,
-                        predecessorLaneSection.idx,
-                        predecessorLane.id,
-                        predecessorWidth.idx
-                    )
-
-                    successorLane = successorLaneSection.getLane(laneLink.toId)
-                    successorWidth = successorLane.getWidth(successorLane.getLastLaneWidthIdx() if connection.contactPoint == "end" else 0)
-
-                    successor = encode_road_section_lane_width_id(
-                        successorRoad.id,
-                        successorLaneSection.idx,
-                        successorLane.id,
-                        successorWidth.idx
-                    )
-
-                    linkIndex.addLink(predecessor, successor)
-
-        # 2. Get links from the roads
-        for road in openDrive.roads:
-            for laneSection in road.lanes.laneSections:
-                for lane in laneSection.allLanes:
-                    for width in lane.widths:
-                        pLaneId = encode_road_section_lane_width_id(road.id, laneSection.idx, lane.id, width.idx)
-
-                        # Not the last width entry? > Next width entry in same lane section
-                        if width.idx < lane.getLastLaneWidthIdx():
-                            successor = encode_road_section_lane_width_id(road.id, laneSection.idx, lane.id, width.idx + 1)
-
-                            linkIndex.addLink(pLaneId, successor)
-
-                            continue
-
-                        # Not the last lane section? > Next lane section in same road
-                        if laneSection.idx < road.lanes.getLastLaneSectionIdx():
-
-                            # If lane does not provide link, we do not have enough information, skip
-                            if lane.link.successorId is None:
-                                print(str(pLaneId) + " skipped because lane does not provide link information")
-                                continue
-
-                            successor = encode_road_section_lane_width_id(road.id, laneSection.idx + 1, lane.link.successorId, 0)
-
-                            linkIndex.addLink(pLaneId, successor)
-                            continue
-
-                        # Connecting to another road
-                        if road.link.successor is not None and road.link.successor.elementType == "road":
-
-                            successorRoad = openDrive.getRoad(road.link.successor.elementId)
-
-                            if successorRoad:
-
-                                successorLaneSection = successorRoad.lanes.getLaneSection(successorRoad.lanes.getLastLaneSectionIdx() if road.link.successor.contactPoint == "end" else 0)
-
-                                # If lane does not provide link, we do not have enough information, skip
-                                if lane.link.successorId is None:
-                                    #print(str(pLaneId) + " skipped")
-                                    continue
-
-                                successorLane = successorLaneSection.getLane(lane.link.successorId)
-                                successorWidth = successorLane.getWidth(successorLane.getLastLaneWidthIdx() if road.link.successor.contactPoint == "end" else 0)
-
-
-                                successor = encode_road_section_lane_width_id(
-                                    successorRoad.id,
-                                    successorLaneSection.idx,
-                                    successorLane.id,
-                                    successorWidth.idx
-                                )
-
-                                linkIndex.addLink(pLaneId, successor)
-                                continue
-
-                        if road.link.predecessor is not None:
-
-                            if road.link.predecessor.elementType == "road":
-
-                                predecessorRoad = openDrive.getRoad(road.link.predecessor.elementId)
-                                if predecessorRoad is None:
-                                    continue
-
-                                predecessorLaneSection = predecessorRoad.lanes.getLaneSection(predecessorRoad.lanes.getLastLaneSectionIdx() if road.link.predecessor.contactPoint == "end" else 0)
-
-                                # If lane does not provide link, we do not have enough information, skip
-                                if lane.link.predecessorId is None:
-                                    #print(str(pLaneId) + " skipped")
-                                    continue
-
-                                predecessorLane = predecessorLaneSection.getLane(lane.link.predecessorId)
-                                predecessorWidth = predecessorLane.getWidth(predecessorLane.getLastLaneWidthIdx() if road.link.predecessor.contactPoint == "end" else 0)
-
-                                predecessor = encode_road_section_lane_width_id(
-                                    predecessorRoad.id,
-                                    predecessorLaneSection.idx,
-                                    predecessorLane.id,
-                                    predecessorWidth.idx
-                                )
-
-                                linkIndex.addLink(predecessor, pLaneId)
-                                continue
-
-        return linkIndex
-
-    @staticmethod
     def handleMergingLanes(pLanes, linkIndex):
 
-        def purgeNullPLanes(pLanes, linkIndex):
-            """ Delete all zero wide lanes """
+        # def purgeNullPLanes(pLanes, linkIndex):
+        #     """ Delete all zero wide lanes """
 
-            for pLane in pLanes:
-                if pLane.isNotExistent:
-                    # Delete from link index
-                    linkIndex.remove(pLane.id)
+        #     for pLane in pLanes:
+        #         if pLane.isNotExistent:
+        #             # Delete from link index
+        #             linkIndex.remove(pLane.id)
 
-                    # Delete from neighbours
-                    # TODO!!!
+        #             # Delete from neighbours
+        #             # TODO!!!
 
-                    # And delete from list itself
-                    pLanes.remove(pLane)
+        #             # And delete from list itself
+        #             pLanes.remove(pLane)
 
         def isMergingIntoInnerPLane(pLane, linkIndex):
             if len(linkIndex.getSuccessors(pLane.id)) == 0 and pLane.innerNeighbours and pLane.innerNeighbours[0].type == pLane.type:
@@ -408,17 +253,16 @@ class Network(object):
                     neighbouringPLane.outerNeighbours.append(pLane)
 
         # Delete all pLanes with width = 0
-        purgeNullPLanes(pLanes, linkIndex)
+        #purgeNullPLanes(pLanes, linkIndex)
         makeOuterNeighbourConnections(pLanes)
 
         mergingPLanes = []
 
         for pLane in pLanes:
+            pass
 
             if isMergingIntoInnerPLane(pLane, linkIndex):
                 sPos = pLane.innerBorder.refOffset + pLane.length
-
-                # TODO add findNeighbourAt method to pLanes
 
                 # Lane can have more than one neighbour, find right one
                 for neighbour in pLane.innerNeighbours:
@@ -480,6 +324,49 @@ class Network(object):
 
         pLanes.extend(mergingPLanes)
 
+
+    @staticmethod
+    def createLinkIndex(openDrive):
+        """ Step through all junctions and each single lane to build up a index """
+
+        linkIndex = LinkIndex()
+
+        # 2. Get links from the roads
+        for road in openDrive.roads:
+            for laneSection in road.lanes.laneSections:
+                for lane in laneSection.allLanes:
+                    for width in lane.widths:
+                        pLaneId = encode_road_section_lane_width_id(road.id, laneSection.idx, lane.id, width.idx)
+
+                        # Not the last width entry? > Next width entry in same lane section
+                        if width.idx < lane.getLastLaneWidthIdx():
+                            successor = encode_road_section_lane_width_id(road.id, laneSection.idx, lane.id, width.idx + 1)
+
+                            if lane.id >= 0:
+                                linkIndex.addLink(successor, pLaneId)
+                            else:
+                                linkIndex.addLink(pLaneId, successor)
+
+                            continue
+
+                        # Not the last lane section? > Next lane section in same road
+                        if laneSection.idx < road.lanes.getLastLaneSectionIdx():
+
+                            # If lane does not provide link, we do not have enough information, skip
+                            if lane.link.successorId is None:
+                                print(str(pLaneId) + " skipped because lane does not provide link information")
+                                continue
+
+                            successor = encode_road_section_lane_width_id(road.id, laneSection.idx + 1, lane.link.successorId, 0)
+
+                            if lane.id >= 0:
+                                linkIndex.addLink(successor, pLaneId)
+                            else:
+                                linkIndex.addLink(pLaneId, successor)
+
+                            continue
+
+        return linkIndex
 
 class LinkIndex(object):
     """ Overall index of all links in the file, save everything as successors, predecessors can be found via a reverse search """

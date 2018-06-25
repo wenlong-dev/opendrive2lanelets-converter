@@ -10,11 +10,6 @@ from lxml.builder import E
 
 
 
-from pprint import pprint
-
-
-
-
 class Scenario(object):
 
     def __init__(self, dt, benchmark_id=None):
