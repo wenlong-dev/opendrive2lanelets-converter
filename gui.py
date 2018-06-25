@@ -6,20 +6,27 @@ import sys
 from lxml import etree
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QLineEdit, QFileDialog, QMainWindow
 from PyQt5.QtWidgets import QPushButton, QMessageBox, QLabel
 
 from opendriveparser import parse_opendrive
 from opendrive2lanelet import Network
 
+from viewer import MainWindow as ViewerWidget
+
 class MainWindow(QWidget):
 
-    def __init__(self):
+    def __init__(self, argv):
         super().__init__()
 
         self.loadedRoadNetwork = None
 
         self._initUserInterface()
+        self.show()
+
+        if len(argv) >= 2:
+            self.loadOpenDriveFile(argv[1])
+            self.viewLaneletNetwork()
 
     def _initUserInterface(self):
 
@@ -31,7 +38,7 @@ class MainWindow(QWidget):
         self.loadButton.setToolTip('Load a OpenDRIVE scenario within a *.xodr file')
         self.loadButton.move(10, 10)
         self.loadButton.resize(130, 35)
-        self.loadButton.clicked.connect(self.openOpenDriveFile)
+        self.loadButton.clicked.connect(self.openOpenDriveFileDialog)
 
         self.inputOpenDriveFile = QLineEdit(self)
         self.inputOpenDriveFile.move(150, 10)
@@ -56,13 +63,11 @@ class MainWindow(QWidget):
         self.viewOutputButton.setDisabled(True)
         self.viewOutputButton.clicked.connect(self.viewLaneletNetwork)
 
-        self.show()
-
     def resetOutputElements(self):
         self.exportCommonRoadButton.setDisabled(True)
         self.viewOutputButton.setDisabled(True)
 
-    def openOpenDriveFile(self):
+    def openOpenDriveFileDialog(self):
         self.resetOutputElements()
 
         path, _ = QFileDialog.getOpenFileName(
@@ -75,6 +80,10 @@ class MainWindow(QWidget):
 
         if not path:
             return
+
+        self.loadOpenDriveFile(path)
+
+    def loadOpenDriveFile(self, path):
 
         filename = os.path.basename(path)
         self.inputOpenDriveFile.setText(filename)
@@ -136,42 +145,55 @@ class MainWindow(QWidget):
         QMessageBox.information(self, 'CommonRoad file created!', 'The CommonRoad file was successfully exported.', QMessageBox.Ok)
 
     def viewLaneletNetwork(self):
-        import matplotlib.pyplot as plt
-        from fvks.visualization.draw_dispatch import draw_object
-        from fvks.scenario.lanelet import Lanelet as FvksLanelet
 
-        def convert_to_fvks_lanelet(ll):
-            return FvksLanelet(
-                left_vertices=ll.left_vertices,
-                center_vertices=ll.center_vertices,
-                right_vertices=ll.right_vertices,
-                lanelet_id=ll.lanelet_id
-            )
+        class ViewerWindow(QMainWindow):
+            def __init__(self, parent=None):
+                super(ViewerWindow, self).__init__(parent)
+                self.viewer = ViewerWidget(self)
 
-        scenario = self.loadedRoadNetwork.exportCommonRoadScenario(filterTypes=[
-            'driving',
-            'onRamp',
-            'offRamp',
-            'stop',
-            'parking',
-            'special1',
-            'special2',
-            'special3',
-            'entry',
-            'exit',
-        ])
+                self.setCentralWidget(self.viewer)
 
-        # Visualization
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
+        viewer = ViewerWindow(self)
+        viewer.viewer.openScenario(self.loadedRoadNetwork.exportCommonRoadScenario())
+        viewer.show()
 
-        for lanelet in scenario.lanelet_network.lanelets:
-            draw_object(convert_to_fvks_lanelet(lanelet), ax=ax)
+    # def viewLaneletNetwork(self):
+    #     import matplotlib.pyplot as plt
+    #     from fvks.visualization.draw_dispatch import draw_object
+    #     from fvks.scenario.lanelet import Lanelet as FvksLanelet
 
-        ax.set_aspect('equal', 'datalim')
-        plt.axis('off')
+    #     def convert_to_fvks_lanelet(ll):
+    #         return FvksLanelet(
+    #             left_vertices=ll.left_vertices,
+    #             center_vertices=ll.center_vertices,
+    #             right_vertices=ll.right_vertices,
+    #             lanelet_id=ll.lanelet_id
+    #         )
 
-        plt.show()
+    #     scenario = self.loadedRoadNetwork.exportCommonRoadScenario(filterTypes=[
+    #         'driving',
+    #         'onRamp',
+    #         'offRamp',
+    #         'stop',
+    #         'parking',
+    #         'special1',
+    #         'special2',
+    #         'special3',
+    #         'entry',
+    #         'exit',
+    #     ])
+
+    #     # Visualization
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111)
+
+    #     for lanelet in scenario.lanelet_network.lanelets:
+    #         draw_object(convert_to_fvks_lanelet(lanelet), ax=ax)
+
+    #     ax.set_aspect('equal', 'datalim')
+    #     plt.axis('off')
+
+    #     plt.show()
 
 
 if __name__ == '__main__':
@@ -180,5 +202,5 @@ if __name__ == '__main__':
 
     # Startup application
     app = QApplication(sys.argv)
-    ex = MainWindow()
+    ex = MainWindow(sys.argv)
     sys.exit(app.exec_())
