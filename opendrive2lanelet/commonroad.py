@@ -198,12 +198,19 @@ class Lanelet(object):
         self.distance = np.array(self.distance)
         self.description = ""
 
+    def calc_width_at_start(self):
+        return np.linalg.norm(self.left_vertices[0], self.right_vertices[0])
+
+    def calc_width_at_end(self):
+        return np.linalg.norm(np.array(self.left_vertices[-1]) - np.array(self.right_vertices[-1]))
+
     def concatenate(self, lanelet, lanelet_id=-1):
         float_tolerance = 1e-6
         if (np.linalg.norm(self.center_vertices[-1] - lanelet.center_vertices[0]) > float_tolerance or
             np.linalg.norm(self.left_vertices[-1] - lanelet.left_vertices[0]) > float_tolerance or
             np.linalg.norm(self.right_vertices[-1] - lanelet.right_vertices[0]) > float_tolerance):
-            return None
+            pass
+            #return None
         left_vertices = np.vstack((self.left_vertices,
                                    lanelet.left_vertices[1:]))
         center_vertices = np.vstack((self.center_vertices,

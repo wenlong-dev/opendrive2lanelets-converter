@@ -52,8 +52,8 @@ class PLane(object):
 
         self._innerBorder = value
 
-    def calcInnerBorder(self, sPos):
-        return self._innerBorder.calc(self._innerBorderOffset + sPos)
+    def calcInnerBorder(self, sPos, addOffset=0.0):
+        return self._innerBorder.calc(self._innerBorderOffset + sPos, addOffset=addOffset)
 
     @property
     def outerBorder(self):
@@ -74,8 +74,8 @@ class PLane(object):
 
         self._outerBorder = value
 
-    def calcOuterBorder(self, sPos):
-        return self._outerBorder.calc(self._outerBorderOffset + sPos)
+    def calcOuterBorder(self, sPos, addOffset=0.0):
+        return self._outerBorder.calc(self._outerBorderOffset + sPos, addOffset=addOffset)
 
     @property
     def outerBorderOffset(self):
@@ -91,7 +91,7 @@ class PLane(object):
 
         return np.linalg.norm(innerCoords[0] - outerCoords[0])
 
-    def convertToLanelet(self, precision=0.5):
+    def convertToLanelet(self, precision=0.5, ref=None, refDistance=[0.0, 0.0]):
         # Define calculation points
         # TODO dependent on max error
         numSteps = max(2, np.ceil(self._length / float(precision)))
@@ -101,8 +101,22 @@ class PLane(object):
         right_vertices = []
 
         for pos in poses:
-            left_vertices.append(self.calcInnerBorder(pos)[0])
-            right_vertices.append(self.calcOuterBorder(pos)[0])
+            if ref is None:
+                left_vertices.append(self.calcInnerBorder(pos)[0])
+                right_vertices.append(self.calcOuterBorder(pos)[0])
+            else:
+                x = pos
+                m = (refDistance[1] - refDistance[0]) / self._length
+                t = refDistance[0]
+
+                d = m*x + t
+
+                if ref == "left":
+                    left_vertices.append(self.calcInnerBorder(pos)[0])
+                    right_vertices.append(self.calcOuterBorder(pos, d)[0])
+                elif ref == "right":
+                    left_vertices.append(self.calcInnerBorder(pos, d)[0])
+                    right_vertices.append(self.calcOuterBorder(pos)[0])
 
         center_vertices = [(l + r) / 2 for (l, r) in zip(left_vertices, right_vertices)]
 

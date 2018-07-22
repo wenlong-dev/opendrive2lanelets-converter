@@ -54,7 +54,7 @@ class Border(object):
         return self._coeffsOffsets
 
     @lru_cache(maxsize=200000)
-    def calc(self, sPos):
+    def calc(self, sPos, addOffset=0.0):
         """ Calculate the border  """
 
         if isinstance(self._reference, PlanView):
@@ -75,7 +75,7 @@ class Border(object):
         widthIdx = next((self._coeffsOffsets.index(n) for n in self._coeffsOffsets[::-1] if n <= sPos), len(self._coeffsOffsets))
 
         # Calculate width at sPos
-        distance = np.polynomial.polynomial.polyval(sPos - self._coeffsOffsets[widthIdx], self._coeffs[widthIdx])
+        distance = np.polynomial.polynomial.polyval(sPos - self._coeffsOffsets[widthIdx], self._coeffs[widthIdx]) + addOffset
 
         # New point is in orthogonal direction
         ortho = refTang + np.pi / 2
