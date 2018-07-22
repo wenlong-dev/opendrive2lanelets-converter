@@ -204,6 +204,16 @@ class MainWindow(QWidget):
                 alpha = 0.5
                 zorder = 5
                 label = '{} successor of {}'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id)
+            elif lanelet.lanelet_id == selected_lanelet.adj_left:
+                color = 'yellow'
+                alpha = 0.5
+                zorder = 5
+                label = '{} adj left of {} ({})'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id, "same" if selected_lanelet.adj_left_same_direction else "opposite")
+            elif lanelet.lanelet_id == selected_lanelet.adj_right:
+                color = 'orange'
+                alpha = 0.5
+                zorder = 5
+                label = '{} adj right of {} ({})'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id, "same" if selected_lanelet.adj_right_same_direction else "opposite")
             else:
                 color = 'gray'
                 alpha = 0.3

@@ -56,6 +56,12 @@ class Scenario(object):
             for successor in lanelet.successor:
                 laneletElement.append(E("successor", ref=str(successor)))
 
+            if lanelet.adj_left is not None:
+                laneletElement.append(E("adjacentLeft", ref=str(lanelet.adj_left), drivingDirection=str("same" if lanelet.adj_left_same_direction else "opposite")))
+
+            if lanelet.adj_right is not None:
+                laneletElement.append(E("adjacentRight", ref=str(lanelet.adj_right), drivingDirection=str("same" if lanelet.adj_right_same_direction else "opposite")))
+
             rootElement.append(laneletElement)
 
         # Dummy planning problem
@@ -153,7 +159,7 @@ class LaneletNetwork(object):
             except ScenarioError:
                 self.lanelets.append(lanelet)
             else:
-                raise ScenarioError
+                raise Exception("Lanelet with id {} already in network.".format(lanelet.lanelet_id))
 
 class Lanelet(object):
 
@@ -192,7 +198,7 @@ class Lanelet(object):
         self.distance = np.array(self.distance)
         self.description = ""
 
-    def concatenate(self, lanelet):
+    def concatenate(self, lanelet, lanelet_id=-1):
         float_tolerance = 1e-6
         if (np.linalg.norm(self.center_vertices[-1] - lanelet.center_vertices[0]) > float_tolerance or
             np.linalg.norm(self.left_vertices[-1] - lanelet.left_vertices[0]) > float_tolerance or
@@ -213,5 +219,5 @@ class Lanelet(object):
                        adjacent_left_same_direction=None,
                        adjacent_right=None,
                        adjacent_right_same_direction=None,
-                       lanelet_id=-1,
+                       lanelet_id=lanelet_id,
                        speed_limit=None)

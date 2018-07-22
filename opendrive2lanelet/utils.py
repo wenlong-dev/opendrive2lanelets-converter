@@ -1,6 +1,5 @@
 
 def encode_road_section_lane_width_id(roadId, sectionId, laneId, widthId):
-    #return str(roadId) + "." + str(sectionId) + "." + str(laneId) + "." + str(widthId)
     return ".".join([str(roadId), str(sectionId), str(laneId), str(widthId)])
 
 def decode_road_section_lane_width_id(encodedString):

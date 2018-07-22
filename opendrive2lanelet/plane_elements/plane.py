@@ -91,7 +91,7 @@ class PLane(object):
 
         return np.linalg.norm(innerCoords[0] - outerCoords[0])
 
-    def converToLanelet(self, precision=0.5):
+    def convertToLanelet(self, precision=0.5):
         # Define calculation points
         # TODO dependent on max error
         numSteps = max(2, np.ceil(self._length / float(precision)))
