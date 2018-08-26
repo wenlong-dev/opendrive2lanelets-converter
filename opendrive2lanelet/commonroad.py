@@ -92,7 +92,7 @@ class Scenario(object):
 
         rootElement.append(planningProblem)
 
-        return etree.tostring(rootElement, pretty_print=True)
+        return etree.tostring(rootElement, pretty_print=True, xml_declaration=True, encoding='utf-8')
 
     @staticmethod
     def read_from_string(input_string, dt=0.1):
