@@ -8,7 +8,8 @@ The following python packages have to be available:
 - numpy
 - scipy
 - lxml
-- PyQt5 only for GUI
+- matplotlib (only for GUI)
+- PyQt5 (only for GUI)
 
 If needed, the converter libraries can be installed using ```pip```:
 
