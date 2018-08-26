@@ -57,10 +57,10 @@ class Scenario(object):
                 laneletElement.append(E("successor", ref=str(successor)))
 
             if lanelet.adj_left is not None:
-                laneletElement.append(E("adjacentLeft", ref=str(lanelet.adj_left), drivingDirection=str("same" if lanelet.adj_left_same_direction else "opposite")))
+                laneletElement.append(E("adjacentLeft", ref=str(lanelet.adj_left), drivingDir=str("same" if lanelet.adj_left_same_direction else "opposite")))
 
             if lanelet.adj_right is not None:
-                laneletElement.append(E("adjacentRight", ref=str(lanelet.adj_right), drivingDirection=str("same" if lanelet.adj_right_same_direction else "opposite")))
+                laneletElement.append(E("adjacentRight", ref=str(lanelet.adj_right), drivingDir=str("same" if lanelet.adj_right_same_direction else "opposite")))
 
             rootElement.append(laneletElement)
 
@@ -99,7 +99,7 @@ class Scenario(object):
 
         # Parse XML using CommonRoad schema
         schema = etree.XMLSchema(file=open(os.path.dirname(os.path.abspath(__file__)) + "/XML_commonRoad_XSD.xsd", "rb"))
-        parser = objectify.makeparser(schema=schema)
+        parser = objectify.makeparser(schema=schema, encoding='utf-8')
 
         root = objectify.fromstring(input_string, parser=parser)
 
