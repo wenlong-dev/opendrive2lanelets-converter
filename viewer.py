@@ -75,8 +75,8 @@ class MainWindow(QWidget):
 
         self.setMinimumSize(1000, 600)
 
-        self.testButton = QPushButton('test', self)
-        self.testButton.clicked.connect(self.testCmd)
+        #self.testButton = QPushButton('test', self)
+        #self.testButton.clicked.connect(self.testCmd)
 
         self.loadButton = QPushButton('Load CommonRoad', self)
         self.loadButton.setToolTip('Load a CommonRoad scenario within a *.xml file')
@@ -128,7 +128,7 @@ class MainWindow(QWidget):
         self.inputCommonRoadFile.setText(filename)
 
         try:
-            fh = open(path, 'r')
+            fh = open(path, 'rb')
             data = fh.read()
             fh.close()
 
@@ -138,7 +138,7 @@ class MainWindow(QWidget):
             QMessageBox.warning(self, 'CommonRoad XML error', 'There was an error during the loading of the selected CommonRoad file.\n\n{}'.format(errorMsg), QMessageBox.Ok)
             return
         except Exception as e:
-            errorMsg = 'Unknown Error: {}'.format(e)
+            errorMsg = '{}'.format(e)
             QMessageBox.warning(self, 'CommonRoad XML error', 'There was an error during the loading of the selected CommonRoad file.\n\n{}'.format(errorMsg), QMessageBox.Ok)
             return
 
@@ -184,41 +184,48 @@ class MainWindow(QWidget):
         for lanelet in self.current_scenario.lanelet_network.lanelets:
 
             # Selected lanelet
-            if selected_lanelet is None:
-                color = 'gray'
-                alpha = 0.3
-                zorder = 0
-                label = None
-            elif lanelet.lanelet_id == selected_lanelet.lanelet_id:
-                color = 'red'
-                alpha = 0.7
-                zorder = 10
-                label = '{} selected'.format(lanelet.lanelet_id)
-            elif lanelet.lanelet_id in selected_lanelet.predecessor:
-                color = 'blue'
-                alpha = 0.5
-                zorder = 5
-                label = '{} predecessor of {}'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id)
-            elif lanelet.lanelet_id in selected_lanelet.successor:
-                color = 'green'
-                alpha = 0.5
-                zorder = 5
-                label = '{} successor of {}'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id)
-            elif lanelet.lanelet_id == selected_lanelet.adj_left:
-                color = 'yellow'
-                alpha = 0.5
-                zorder = 5
-                label = '{} adj left of {} ({})'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id, "same" if selected_lanelet.adj_left_same_direction else "opposite")
-            elif lanelet.lanelet_id == selected_lanelet.adj_right:
-                color = 'orange'
-                alpha = 0.5
-                zorder = 5
-                label = '{} adj right of {} ({})'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id, "same" if selected_lanelet.adj_right_same_direction else "opposite")
+            if selected_lanelet is not None:
+
+                draw_arrow = True
+
+                if lanelet.lanelet_id == selected_lanelet.lanelet_id:
+                    color = 'red'
+                    alpha = 0.7
+                    zorder = 10
+                    label = '{} selected'.format(lanelet.lanelet_id)
+                elif lanelet.lanelet_id in selected_lanelet.predecessor:
+                    color = 'blue'
+                    alpha = 0.5
+                    zorder = 5
+                    label = '{} predecessor of {}'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id)
+                elif lanelet.lanelet_id in selected_lanelet.successor:
+                    color = 'green'
+                    alpha = 0.5
+                    zorder = 5
+                    label = '{} successor of {}'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id)
+                elif lanelet.lanelet_id == selected_lanelet.adj_left:
+                    color = 'yellow'
+                    alpha = 0.5
+                    zorder = 5
+                    label = '{} adj left of {} ({})'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id, "same" if selected_lanelet.adj_left_same_direction else "opposite")
+                elif lanelet.lanelet_id == selected_lanelet.adj_right:
+                    color = 'orange'
+                    alpha = 0.5
+                    zorder = 5
+                    label = '{} adj right of {} ({})'.format(lanelet.lanelet_id, selected_lanelet.lanelet_id, "same" if selected_lanelet.adj_right_same_direction else "opposite")
+                else:
+                    color = 'gray'
+                    alpha = 0.3
+                    zorder = 0
+                    label = None
+                    draw_arrow = False
+
             else:
                 color = 'gray'
                 alpha = 0.3
                 zorder = 0
                 label = None
+                draw_arrow = False
 
 
             verts = []
@@ -245,6 +252,15 @@ class MainWindow(QWidget):
             ax.plot([x for x, y in lanelet.left_vertices], [y for x, y in lanelet.left_vertices], color="black", lw=0.1)
             ax.plot([x for x, y in lanelet.right_vertices], [y for x, y in lanelet.right_vertices], color="black", lw=0.1)
 
+            if draw_arrow:
+                idx = 0
+
+                ml = lanelet.left_vertices[idx]
+                mr = lanelet.right_vertices[idx]
+                mc = lanelet.center_vertices[min(len(lanelet.center_vertices) - 1, idx + 10)]
+
+                ax.plot([ml[0], mr[0], mc[0], ml[0]], [ml[1], mr[1], mc[1], ml[1]], color="black", lw=0.3, zorder=15)
+
         handles, labels = self.dynamic.get_axes().get_legend_handles_labels()
         self.dynamic.get_axes().legend(handles, labels)
 
@@ -261,8 +277,8 @@ class MainWindow(QWidget):
             self.laneletsList.setItem(idx - 1, 0, QTableWidgetItem("{}".format(lanelet.lanelet_id)))
             self.laneletsList.setItem(idx - 1, 1, QTableWidgetItem("{}".format(lanelet.description)))
 
-    def testCmd(self):
-        self.dynamic.fig.savefig("foo.pdf", bbox_inches='tight')
+    #def testCmd(self):
+    #    self.dynamic.fig.savefig("foo.pdf", bbox_inches='tight')
 
 
 
