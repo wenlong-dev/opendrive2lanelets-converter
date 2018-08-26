@@ -128,7 +128,11 @@ class Scenario(object):
                 right_vertices=np.array([np.array([x, y]) for x, y in right_vertices]),
                 lanelet_id=int(lanelet.attrib['id']),
                 predecessor=[int(el.attrib['ref']) for el in lanelet.iterchildren(tag='predecessor')],
-                successor=[int(el.attrib['ref']) for el in lanelet.iterchildren(tag='successor')]
+                successor=[int(el.attrib['ref']) for el in lanelet.iterchildren(tag='successor')],
+                adjacent_left=int(lanelet.adjacentLeft.attrib['ref']) if lanelet.find('adjacentLeft') is not None else None,
+                adjacent_left_same_direction=lanelet.adjacentLeft.attrib['drivingDir'] == "same" if lanelet.find('adjacentLeft') is not None else None,
+                adjacent_right=int(lanelet.adjacentRight.attrib['ref']) if lanelet.find('adjacentRight') is not None else None,
+                adjacent_right_same_direction=lanelet.adjacentRight.attrib['drivingDir'] == "same" if lanelet.find('adjacentRight') is not None else None
             ))
 
         return scenario
