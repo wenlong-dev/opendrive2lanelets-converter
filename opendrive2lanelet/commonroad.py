@@ -29,9 +29,19 @@ class Scenario(object):
         else:
             raise ScenarioError
 
-    def export_to_string(self):
+    def export_to_string(self, benchmarkId=None, date=None, timeStepSize=None, author=None, affiliation=None, source=None, tags=None):
 
-        rootElement = E("commonRoad", benchmarkID="a", commonRoadVersion="2017a", date=time.strftime("%Y-%m-%d"), timeStepSize="0.1")
+        rootElement = E(
+            "commonRoad",
+            benchmarkID="unknown" if benchmarkId is None else benchmarkId,
+            commonRoadVersion="2018a",
+            date=time.strftime("%Y-%m-%d") if date is None else date,
+            timeStepSize="0.1" if timeStepSize is None else timeStepSize,
+            author="" if author is None else author,
+            affiliation="" if affiliation is None else affiliation,
+            source="" if source is None else source,
+            tags="" if tags is None else tags
+        )
 
         # Road network
         for lanelet in self.lanelet_network.lanelets:
@@ -77,22 +87,29 @@ class Scenario(object):
 
         planningProblem.append(initialState)
 
-        goalRegion = E("goalRegion")
+        goalState = E("goalState")
+        goalState.append(E('position', E('circle', E('radius', str(1.0)), E('center', E('x', str(0.0)), E('y', str(0.0))))))
 
-        goalState = E("state")
-        goalState.append(E('position', E('point', E('x', str(0.0)), E('y', str(0.0)))))
-        goalState.append(E('orientation', E('exact', str(0.0))))
-        goalState.append(E('time', E('exact', str(0.0))))
-        goalState.append(E('velocity', E('exact', str(0.0))))
-        goalState.append(E('acceleration', E('exact', str(0.0))))
+        goalState.append(E('time', E('intervalStart', str(0.0)), E('intervalEnd', str(1.0))))
+        goalState.append(E('orientation', E('intervalStart', str(0.0)), E('intervalEnd', str(1.0))))
+        goalState.append(E('velocity', E('intervalStart', str(0.0)), E('intervalEnd', str(1.0))))
 
-        goalRegion.append(goalState)
-
-        planningProblem.append(goalRegion)
+        planningProblem.append(goalState)
 
         rootElement.append(planningProblem)
 
-        return etree.tostring(rootElement, pretty_print=True, xml_declaration=True, encoding='utf-8')
+        commonRoadScenarioStr = etree.tostring(rootElement, pretty_print=True, xml_declaration=True, encoding='utf-8')
+
+        # Make sure the XML is a valid
+        schema = etree.XMLSchema(file=open(os.path.dirname(os.path.abspath(__file__)) + "/XML_commonRoad_XSD.xsd", "rb"))
+        parser = objectify.makeparser(schema=schema, encoding='utf-8')
+
+        try:
+            etree.fromstring(commonRoadScenarioStr, parser)
+        except etree.XMLSyntaxError as e:
+            raise Exception('Could not produce valid CommonRoad file! Error: {}'.format(e.msg))
+
+        return commonRoadScenarioStr
 
     @staticmethod
     def read_from_string(input_string, dt=0.1):

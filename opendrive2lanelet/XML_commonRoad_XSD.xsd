@@ -1,45 +1,82 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
 XSD for CommonRoad benchmark scenarios
-commonRoadVersion="2017a" date="2018-03-23"
+commonRoadVersion="2018a" date="2018-06-19"
 author="Markus Koschi"
+affiliation="Technical University of Munich, Germany"
 website="commonroad.in.tum.de"
 -->
 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
-
 	<!-- %%%%%%%%%%%%%%% auxiliary xsd elements %%%%%%%%%%%%%%% -->
-    <!-- distance in meter (positive floats) -->
+    <!-- distance in meter (positive decimals) -->
     <xs:simpleType name="distance">
-        <xs:restriction base="xs:float">
+        <xs:restriction base="xs:decimal">
             <xs:minExclusive value="0.0" />
         </xs:restriction>
     </xs:simpleType>
 
+	<!-- zero value -->
+	<xs:simpleType name="valueZero">
+		<xs:restriction base="xs:decimal">
+			<xs:minInclusive value="0.0" />
+			<xs:maxInclusive value="0.0" />
+		</xs:restriction>
+	</xs:simpleType>
+				
 	<!-- value: either exact or interval -->
-    <xs:complexType name="floatInterval">
+    <xs:complexType name="decimalExactOrInterval">
         <xs:choice>
-            <xs:element name="exact" type="xs:float" />
+            <xs:element name="exact" type="xs:decimal" />
             <xs:sequence>
-                <xs:element name="intervalStart" type="xs:float" />
-                <xs:element name="intervalEnd" type="xs:float" />
+                <xs:element name="intervalStart" type="xs:decimal" />
+                <xs:element name="intervalEnd" type="xs:decimal" />
             </xs:sequence>
         </xs:choice>
     </xs:complexType>
 
+	<xs:complexType name="decimalExactOrIntervalZero">
+        <xs:choice>
+            <xs:element name="exact" type="valueZero" />
+            <xs:sequence>
+                <xs:element name="intervalStart" type="valueZero" />
+                <xs:element name="intervalEnd" type="xs:decimal" />
+            </xs:sequence>
+        </xs:choice>
+    </xs:complexType>
+	
+	<xs:complexType name="decimalExact">
+        <xs:all>
+            <xs:element name="exact" type="xs:decimal" />
+        </xs:all>
+    </xs:complexType>
+	
+	<xs:complexType name="decimalExactZero">
+        <xs:all>
+			<xs:element name="exact" type="valueZero" />	
+        </xs:all>
+    </xs:complexType>
+	
+	<xs:complexType name="decimalInterval">
+        <xs:sequence>
+            <xs:element name="intervalStart" type="xs:decimal" />
+			<xs:element name="intervalEnd" type="xs:decimal" />
+        </xs:sequence>
+    </xs:complexType>
+	
 	<!-- %%%%%%%%%%%%%%% auxiliary CommonRoad elements %%%%%%%%%%%%%%% -->
     <xs:complexType name="point">
         <xs:sequence>
-            <xs:element name="x" type="xs:float" />
-            <xs:element name="y" type="xs:float" />
+            <xs:element name="x" type="xs:decimal" />
+            <xs:element name="y" type="xs:decimal" />
         </xs:sequence>
     </xs:complexType>
-
+	
     <xs:complexType name="rectangle">
         <xs:sequence>
             <xs:element name="length" type="distance" />
             <xs:element name="width" type="distance" />
-            <xs:element name="orientation" type="xs:float" minOccurs="0" />
+            <xs:element name="orientation" type="xs:decimal" minOccurs="0" />
             <xs:element name="center" type="point" minOccurs="0" />
         </xs:sequence>
     </xs:complexType>
@@ -53,7 +90,7 @@ website="commonroad.in.tum.de"
 
     <xs:complexType name="polygon">
         <xs:sequence>
-            <xs:element name="point" type="point"
+            <xs:element name="point" type="point" 
 				minOccurs="3" maxOccurs="unbounded" />
         </xs:sequence>
     </xs:complexType>
@@ -65,7 +102,7 @@ website="commonroad.in.tum.de"
             <xs:element name="polygon" type="polygon" />
         </xs:choice>
     </xs:complexType>
-
+	
 	<xs:complexType name="position">
 		<xs:choice>
 			<xs:element name="point" type="point" />
@@ -75,37 +112,74 @@ website="commonroad.in.tum.de"
 			<xs:element name="lanelet" type="laneletRef" maxOccurs="unbounded" />
 		</xs:choice>
 	</xs:complexType>
-
+	
+	<xs:complexType name="positionExact">
+		<xs:all>
+			<xs:element name="point" type="point" />
+		</xs:all>
+	</xs:complexType>
+	
+		<xs:complexType name="positionInterval">
+		<xs:choice>
+			<xs:element name="rectangle" type="rectangle" maxOccurs="unbounded" />
+			<xs:element name="circle" type="circle" maxOccurs="unbounded" />
+			<xs:element name="polygon" type="polygon" maxOccurs="unbounded" />
+			<xs:element name="lanelet" type="laneletRef" maxOccurs="unbounded" />
+		</xs:choice>
+	</xs:complexType>
+	
 	<xs:complexType name="state">
-        <xs:sequence>
-            <xs:element name="position" type="position" />
-            <xs:element name="orientation" type="floatInterval" />
-            <xs:element name="time" type="floatInterval" />
-            <xs:element name="velocity" type="floatInterval" minOccurs="0" />
-            <xs:element name="acceleration" type="floatInterval" minOccurs="0" />
-        </xs:sequence>
-    </xs:complexType>
-
-	<xs:complexType name="initialState">
         <xs:all>
             <xs:element name="position" type="position" />
-			<xs:element name="velocity" type="floatInterval" />
-            <xs:element name="orientation" type="floatInterval" />
-			<xs:element name="yawRate" type="floatInterval" />
-			<xs:element name="slipAngle" type="floatInterval" />
-            <xs:element name="time" type="floatInterval" />
+            <xs:element name="orientation" type="decimalExactOrInterval" />
+            <xs:element name="time" type="decimalExactOrInterval" />
+            <xs:element name="velocity" type="decimalExactOrInterval" minOccurs="0" />
+            <xs:element name="acceleration" type="decimalExactOrInterval" minOccurs="0" />
+			<xs:element name="yawRate" type="decimalExactOrInterval" minOccurs="0" />
+			<xs:element name="slipAngle" type="decimalExactOrInterval" minOccurs="0" />
         </xs:all>
     </xs:complexType>
-
+	
+	<xs:complexType name="stateStartingTimeZero">
+        <xs:all>
+            <xs:element name="position" type="position" />
+            <xs:element name="orientation" type="decimalExactOrInterval" />
+            <xs:element name="time" type="decimalExactOrIntervalZero" />
+            <xs:element name="velocity" type="decimalExactOrInterval" minOccurs="0" />
+            <xs:element name="acceleration" type="decimalExactOrInterval" minOccurs="0" />
+			<xs:element name="yawRate" type="decimalExactOrInterval" minOccurs="0" />
+			<xs:element name="slipAngle" type="decimalExactOrInterval" minOccurs="0" />
+        </xs:all>
+    </xs:complexType>
+	
+	<xs:complexType name="initialState">
+        <xs:all>
+            <xs:element name="position" type="positionExact" />
+			<xs:element name="velocity" type="decimalExact" />
+            <xs:element name="orientation" type="decimalExact" />
+			<xs:element name="yawRate" type="decimalExact" />
+			<xs:element name="slipAngle" type="decimalExact" />
+            <xs:element name="time" type="decimalExactZero" />
+        </xs:all>
+    </xs:complexType>
+	
+	<xs:complexType name="goalState">
+        <xs:all>
+			<xs:element name="time" type="decimalInterval" />
+            <xs:element name="position" type="positionInterval" minOccurs="0" />
+            <xs:element name="orientation" type="decimalInterval" minOccurs="0" />
+			<xs:element name="velocity" type="decimalInterval" minOccurs="0" />         
+        </xs:all>
+    </xs:complexType>
+	
     <xs:complexType name="occupancy">
         <xs:sequence>
             <xs:element name="shape" type="shape" />
-            <xs:element name="time" type="floatInterval" />
+            <xs:element name="time" type="decimalExactOrInterval" />
         </xs:sequence>
-    </xs:complexType>
+    </xs:complexType>    
 
 	<!-- %%%%%%%%%%%%%%% main CommonRoad elements %%%%%%%%%%%%%%% -->
-
 	<!-- lanelet -->
     <xs:simpleType name="lineMarking">
         <xs:restriction base="xs:string">
@@ -152,12 +226,12 @@ website="commonroad.in.tum.de"
 				minOccurs="0" />
 			<xs:element name="adjacentRight" type="laneletAdjacentRef"
 				minOccurs="0" />
-			<xs:element name="speedLimit" type="xs:float"
+			<xs:element name="speedLimit" type="xs:decimal"
 				minOccurs="0" />
         </xs:sequence>
         <xs:attribute name="id" type="xs:integer" use="required" />
     </xs:complexType>
-
+	
 	<!-- obstacle -->
 	<xs:simpleType name="obstacleRole">
         <xs:restriction base="xs:string">
@@ -180,9 +254,10 @@ website="commonroad.in.tum.de"
             <xs:enumeration value="bicycle" />
             <xs:enumeration value="pedestrian" />
             <xs:enumeration value="priorityVehicle" />
+            <xs:enumeration value="train" />
         </xs:restriction>
     </xs:simpleType>
-
+	
     <xs:complexType name="obstacle">
         <xs:sequence>
             <xs:element name="role" type="obstacleRole" />
@@ -193,16 +268,15 @@ website="commonroad.in.tum.de"
                 <xs:element name="trajectory">
                     <xs:complexType>
                         <xs:sequence>
-                            <xs:element name="state" type="state"
-                                maxOccurs="unbounded" />
+                            <xs:element name="state" type="stateStartingTimeZero" />
+                            <xs:element name="state" type="state" minOccurs="0" maxOccurs="unbounded" />
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
                 <xs:element name="occupancySet">
                     <xs:complexType>
                         <xs:sequence>
-                            <xs:element name="occupancy" type="occupancy"
-                                maxOccurs="unbounded" />
+                            <xs:element name="occupancy" type="occupancy" maxOccurs="unbounded" />
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
@@ -215,14 +289,8 @@ website="commonroad.in.tum.de"
 	<xs:complexType name="planningProblem">
         <xs:sequence>
 			<xs:element name="initialState" type="initialState" />
-            <xs:element name="goalRegion">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="state" type="state"
-                            maxOccurs="unbounded" />
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
+            <xs:element name="goalState" type="goalState" 
+				minOccurs="1" maxOccurs="unbounded" />
         </xs:sequence>
         <xs:attribute name="id" type="xs:integer" use="required" />
     </xs:complexType>
@@ -241,16 +309,17 @@ website="commonroad.in.tum.de"
             <xs:attribute name="commonRoadVersion" use="required">
                 <xs:simpleType>
                     <xs:restriction base="xs:string">
-                        <xs:enumeration value="2017a" />
+                        <xs:enumeration value="2018a" />
                     </xs:restriction>
                 </xs:simpleType>
             </xs:attribute>
-            <xs:attribute name="benchmarkID" type="xs:string"
-				use="required" />
-            <xs:attribute name="date" type="xs:date"
-				use="required" />
-            <xs:attribute name="timeStepSize" type="xs:float"
-				use="required" />
+            <xs:attribute name="benchmarkID" type="xs:string" use="required" />
+            <xs:attribute name="date" type="xs:date" use="required" />
+			<xs:attribute name="author" type="xs:string" use="required" />
+			<xs:attribute name="affiliation" type="xs:string" use="required" />
+			<xs:attribute name="source" type="xs:string" use="required" />
+			<xs:attribute name="tags" type="xs:string" use="required" />
+            <xs:attribute name="timeStepSize" type="xs:decimal" use="required" />
         </xs:complexType>
         <xs:key name="id">
             <xs:selector xpath="./*" />
