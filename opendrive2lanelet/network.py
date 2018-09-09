@@ -84,67 +84,68 @@ class Network(object):
         # Condition for lane merge:
         # - Lanelet ends (has no successor or predecessor)
         # - Has an adjacent (left or right) with same type
-        for lanelet in laneletNetwork.lanelets:
+        if True:
+            for lanelet in laneletNetwork.lanelets:
 
-            if len(lanelet.successor) == 0:
+                if len(lanelet.successor) == 0:
 
-                if lanelet.adj_left is not None:
-                    adj_left_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_left)
+                    if lanelet.adj_left is not None:
+                        adj_left_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_left)
 
-                    newLanelet = lanelet.refPLane.convertToLanelet(
-                        ref="right",
-                        refDistance=[adj_left_lanelet.calc_width_at_end(), 0.0]
-                    )
+                        newLanelet = lanelet.refPLane.convertToLanelet(
+                            ref="right",
+                            refDistance=[adj_left_lanelet.calc_width_at_end(), 0.0]
+                        )
 
-                    lanelet.left_vertices = newLanelet.left_vertices
-                    lanelet.center_vertices = newLanelet.center_vertices
-                    lanelet.right_vertices = newLanelet.right_vertices
+                        lanelet.left_vertices = newLanelet.left_vertices
+                        lanelet.center_vertices = newLanelet.center_vertices
+                        lanelet.right_vertices = newLanelet.right_vertices
 
-                    lanelet.successor.extend(adj_left_lanelet.successor)
+                        lanelet.successor.extend(adj_left_lanelet.successor)
 
-                if lanelet.adj_right is not None:
-                    adj_right_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_right)
+                    if lanelet.adj_right is not None:
+                        adj_right_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_right)
 
-                    newLanelet = lanelet.refPLane.convertToLanelet(
-                        ref="left",
-                        refDistance=[-1 * adj_right_lanelet.calc_width_at_end(), 0.0]
-                    )
+                        newLanelet = lanelet.refPLane.convertToLanelet(
+                            ref="left",
+                            refDistance=[-1 * adj_right_lanelet.calc_width_at_end(), 0.0]
+                        )
 
-                    lanelet.left_vertices = newLanelet.left_vertices
-                    lanelet.center_vertices = newLanelet.center_vertices
-                    lanelet.right_vertices = newLanelet.right_vertices
+                        lanelet.left_vertices = newLanelet.left_vertices
+                        lanelet.center_vertices = newLanelet.center_vertices
+                        lanelet.right_vertices = newLanelet.right_vertices
 
-                    lanelet.successor.extend(adj_right_lanelet.successor)
+                        lanelet.successor.extend(adj_right_lanelet.successor)
 
-            if len(lanelet.predecessor) == 0:
+                if len(lanelet.predecessor) == 0:
 
-                if lanelet.adj_left is not None:
-                    adj_left_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_left)
+                    if lanelet.adj_left is not None:
+                        adj_left_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_left)
 
-                    newLanelet = lanelet.refPLane.convertToLanelet(
-                        ref="right",
-                        refDistance=[0.0, -1 * adj_left_lanelet.calc_width_at_end()]
-                    )
+                        newLanelet = lanelet.refPLane.convertToLanelet(
+                            ref="right",
+                            refDistance=[0.0, -1 * adj_left_lanelet.calc_width_at_end()]
+                        )
 
-                    lanelet.left_vertices = newLanelet.left_vertices
-                    lanelet.center_vertices = newLanelet.center_vertices
-                    lanelet.right_vertices = newLanelet.right_vertices
+                        lanelet.left_vertices = newLanelet.left_vertices
+                        lanelet.center_vertices = newLanelet.center_vertices
+                        lanelet.right_vertices = newLanelet.right_vertices
 
-                    lanelet.predecessor.extend(adj_left_lanelet.predecessor)
+                        lanelet.predecessor.extend(adj_left_lanelet.predecessor)
 
-                if lanelet.adj_right is not None:
-                    adj_right_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_right)
+                    if lanelet.adj_right is not None:
+                        adj_right_lanelet = laneletNetwork.find_lanelet_by_id(lanelet.adj_right)
 
-                    newLanelet = lanelet.refPLane.convertToLanelet(
-                        ref="left",
-                        refDistance=[0.0, adj_right_lanelet.calc_width_at_end()]
-                    )
+                        newLanelet = lanelet.refPLane.convertToLanelet(
+                            ref="left",
+                            refDistance=[0.0, adj_right_lanelet.calc_width_at_end()]
+                        )
 
-                    lanelet.left_vertices = newLanelet.left_vertices
-                    lanelet.center_vertices = newLanelet.center_vertices
-                    lanelet.right_vertices = newLanelet.right_vertices
+                        lanelet.left_vertices = newLanelet.left_vertices
+                        lanelet.center_vertices = newLanelet.center_vertices
+                        lanelet.right_vertices = newLanelet.right_vertices
 
-                    lanelet.predecessor.extend(adj_right_lanelet.predecessor)
+                        lanelet.predecessor.extend(adj_right_lanelet.predecessor)
 
 
         # Assign an integer id to each lanelet
@@ -265,13 +266,6 @@ class Network(object):
 
                     outerNeighbourId = encode_road_section_lane_width_id(laneSection.parentRoad.id, laneSection.idx, outerLaneId, -1)
 
-                newPLaneGroup = PLaneGroup(
-                    id=encode_road_section_lane_width_id(laneSection.parentRoad.id, laneSection.idx, lane.id, -1),
-                    innerNeighbour=innerNeighbourId,
-                    innerNeighbourSameDirection=innerNeighbourSameDirection,
-                    outerNeighbour=outerNeighbourId
-                )
-
                 innerNeighbours = []
 
                 # Create outer lane border
@@ -291,6 +285,8 @@ class Network(object):
                 laneBorders.append(newPLaneBorder)
 
                 # Create new lane for each width segment
+                newPLanesList = []
+
                 for width in lane.widths:
 
                     newPLane = PLane(
@@ -311,10 +307,26 @@ class Network(object):
                     newPLane.outerBorder = laneBorders[-1]
                     newPLane.outerBorderOffset = width.sOffset
 
-                    newPLaneGroup.append(newPLane)
+                    newPLanesList.append(newPLane)
                     innerNeighbours.append(newPLane)
 
-                newPLanes.append(newPLaneGroup)
+                # Organize everything in a pLaneGroup if it is more than one element
+                if len(newPLanesList) >= 1:
+                    newPLaneGroup = PLaneGroup(
+                        id=encode_road_section_lane_width_id(laneSection.parentRoad.id, laneSection.idx, lane.id, -1),
+                        innerNeighbour=innerNeighbourId,
+                        innerNeighbourSameDirection=innerNeighbourSameDirection,
+                        outerNeighbour=outerNeighbourId,
+                        reverse=True if lane.id > 0 else False
+                    )
+
+                    for newPLane in newPLanesList:
+                        newPLaneGroup.append(newPLane)
+
+                    newPLanes.append(newPLaneGroup)
+
+                else:
+                    newPLanes.append(newPLanesList[0])
 
                 prevInnerNeighbours = innerNeighbours
 

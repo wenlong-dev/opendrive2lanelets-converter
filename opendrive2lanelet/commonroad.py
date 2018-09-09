@@ -211,13 +211,14 @@ class Lanelet(object):
 
         self.lanelet_id = lanelet_id
         self.speed_limit = speed_limit
+        self.description = ""
+
         self.distance = [0]
         for i in range(1, len(self.center_vertices)):
             self.distance.append(self.distance[i-1] +
                                  np.linalg.norm(self.center_vertices[i] -
                                                 self.center_vertices[i-1]))
         self.distance = np.array(self.distance)
-        self.description = ""
 
     def calc_width_at_start(self):
         return np.linalg.norm(self.left_vertices[0], self.right_vertices[0])
@@ -226,23 +227,33 @@ class Lanelet(object):
         return np.linalg.norm(np.array(self.left_vertices[-1]) - np.array(self.right_vertices[-1]))
 
     def concatenate(self, lanelet, lanelet_id=-1):
+        laneletA = self
+        laneletB = lanelet
+
         float_tolerance = 1e-6
-        if (np.linalg.norm(self.center_vertices[-1] - lanelet.center_vertices[0]) > float_tolerance or
-            np.linalg.norm(self.left_vertices[-1] - lanelet.left_vertices[0]) > float_tolerance or
-            np.linalg.norm(self.right_vertices[-1] - lanelet.right_vertices[0]) > float_tolerance):
+        if (np.linalg.norm(laneletA.center_vertices[-1] - laneletB.center_vertices[0]) > float_tolerance or
+            np.linalg.norm(laneletA.left_vertices[-1] - laneletB.left_vertices[0]) > float_tolerance or
+            np.linalg.norm(laneletA.right_vertices[-1] - laneletB.right_vertices[0]) > float_tolerance):
             pass
+            # TODO
+            # raise Exception("no way {} {} {}".format(
+            #     np.linalg.norm(laneletA.center_vertices[-1] - laneletB.center_vertices[0]),
+            #     np.linalg.norm(laneletA.left_vertices[-1] - laneletB.left_vertices[0]),
+            #     np.linalg.norm(laneletA.right_vertices[-1] - laneletB.right_vertices[0])
+            # ))
             #return None
-        left_vertices = np.vstack((self.left_vertices,
-                                   lanelet.left_vertices[1:]))
-        center_vertices = np.vstack((self.center_vertices,
-                                     lanelet.center_vertices[1:]))
-        right_vertices = np.vstack((self.right_vertices,
-                                    lanelet.right_vertices[1:]))
+
+        left_vertices = np.vstack((laneletA.left_vertices,
+                                   laneletB.left_vertices[1:]))
+        center_vertices = np.vstack((laneletA.center_vertices,
+                                     laneletB.center_vertices[1:]))
+        right_vertices = np.vstack((laneletA.right_vertices,
+                                    laneletB.right_vertices[1:]))
         return Lanelet(center_vertices=center_vertices,
                        left_vertices=left_vertices,
                        right_vertices=right_vertices,
-                       predecessor=self.predecessor.copy(),
-                       successor=lanelet.successor.copy(),
+                       predecessor=laneletA.predecessor.copy(),
+                       successor=laneletB.successor.copy(),
                        adjacent_left=None,
                        adjacent_left_same_direction=None,
                        adjacent_right=None,

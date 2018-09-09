@@ -1,14 +1,18 @@
 
+from opendrive2lanelet.commonroad import Lanelet
+
 class PLaneGroup(object):
     """ A group of pLanes can be converted to a lanelet just like a single pLane """
 
-    def __init__(self, id=None, pLanes=None, innerNeighbour=None, innerNeighbourSameDirection=True, outerNeighbour=None):
+    def __init__(self, id=None, pLanes=None, innerNeighbour=None, innerNeighbourSameDirection=True, outerNeighbour=None, reverse = False):
 
         self._pLanes = []
         self._id = id
         self._innerNeighbour = innerNeighbour
         self._innerNeighbourSameDirection = innerNeighbourSameDirection
         self._outerNeighbour = outerNeighbour
+
+        self._reverse = reverse
 
         if pLanes is not None:
 
@@ -53,7 +57,9 @@ class PLaneGroup(object):
                 continue
 
             # Append all following lanelets
-            lanelet = lanelet.concatenate(pLane.convertToLanelet(precision=precision, ref=ref, refDistance=[y1, y2]), self.id)
+            newLanelet = pLane.convertToLanelet(precision=precision, ref=ref, refDistance=[y1, y2])
+
+            lanelet = lanelet.concatenate(newLanelet, self.id)
 
             y1 = y2
 
@@ -68,6 +74,21 @@ class PLaneGroup(object):
         if self.outerNeighbour is not None:
             lanelet.adj_right = self.outerNeighbour
             lanelet.adj_right_same_direction = True
+
+        if self._reverse:
+            newLanelet = Lanelet(
+                left_vertices=lanelet.right_vertices[::-1],
+                center_vertices=lanelet.center_vertices[::-1],
+                right_vertices=lanelet.left_vertices[::-1],
+                lanelet_id=lanelet.lanelet_id
+            )
+
+            newLanelet.adj_left = lanelet.adj_left
+            newLanelet.adj_left_same_direction = lanelet.adj_left_same_direction
+            newLanelet.adj_right = lanelet.adj_right
+            newLanelet.adj_right_same_direction = lanelet.adj_right_same_direction
+
+            lanelet = newLanelet
 
         return lanelet
 

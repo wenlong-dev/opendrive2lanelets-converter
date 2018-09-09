@@ -232,10 +232,12 @@ class MainWindow(QWidget):
             codes = [Path.MOVETO]
 
             # TODO efficiency
+
             for x, y in np.vstack([lanelet.left_vertices, lanelet.right_vertices[::-1]]):
                 verts.append([x, y])
                 codes.append(Path.LINETO)
 
+                #if color != 'gray':
                 xlim1 = min(xlim1, x)
                 xlim2 = max(xlim2, x)
 
@@ -264,8 +266,9 @@ class MainWindow(QWidget):
         handles, labels = self.dynamic.get_axes().get_legend_handles_labels()
         self.dynamic.get_axes().legend(handles, labels)
 
-        self.dynamic.get_axes().set_xlim([xlim1, xlim2])
-        self.dynamic.get_axes().set_ylim([ylim1, ylim2])
+        if xlim1 != float('Inf') and xlim2 != float('Inf') and ylim1 != float('Inf') and ylim2 != float('Inf'):
+            self.dynamic.get_axes().set_xlim([xlim1, xlim2])
+            self.dynamic.get_axes().set_ylim([ylim1, ylim2])
 
         self.dynamic.update_plot()
 
